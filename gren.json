@@ -1,0 +1,16 @@
+{
+  "type": "package",
+  "name": "lindenlion/gren-datatables",
+  "summary": "fork of elm-sortable-table, inspired by datatables.net",
+  "license": "MIT",
+  "version": "0.1.0",
+  "exposed-modules": ["DataTable"],
+  "platform": "browser",
+  "source-directories": ["src"],
+  "gren-version": "0.5.3 <= v < 0.6.0",
+  "dependencies": {
+    "gren-lang/browser": "5.0.0 <= v < 6.0.0",
+    "gren-lang/core": "6.0.1 <= v < 7.0.0",
+    "gren-lang/url": "5.0.0 <= v < 6.0.0"
+  }
+}

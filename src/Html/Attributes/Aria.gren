@@ -1,0 +1,289 @@
+module Html.Attributes.Aria exposing
+    ( role
+    , activeDescendant
+    , checked
+    , controls
+    , describedby
+    , disabled
+    , expanded
+    , hasPopup
+    , hidden
+    , label
+    , labelledby
+    , live
+    , pressed
+    , readonly
+    , required
+    , selected
+    , sort
+    , valueMax
+    , valueMin
+    , valueNow
+    )
+
+{-| Additional attributes for html
+
+
+# Aria role
+
+@docs role
+
+
+# Aria Attributes
+
+@docs activeDescendant
+@docs checked
+@docs controls
+@docs describedby
+@docs disabled
+@docs expanded
+@docs hasPopup
+@docs hidden
+@docs label
+@docs labelledby
+@docs live
+@docs pressed
+@docs readonly
+@docs required
+@docs selected
+@docs sort
+@docs valueMax
+@docs valueMin
+@docs valueNow
+
+-}
+
+import Html exposing (Attribute)
+import Html.Attributes exposing (attribute)
+import Json.Encode as JE
+
+
+boolAttribute : String -> Bool -> Attribute msg
+boolAttribute name val =
+    attribute name (JE.encode 0 <| JE.bool val)
+
+
+floatAttribute : String -> Float -> Attribute msg
+floatAttribute name val =
+    attribute name (String.fromFloat val)
+
+
+{-| Identifies the currently active descendant of a composite widget.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-activedescendant).
+
+    div [ activeDescendant "id" ] [ text "Hello aria!" ]
+
+-}
+activeDescendant : String -> Attribute msg
+activeDescendant =
+    attribute "aria-activedescendant"
+
+
+{-| Indicates the current "checked" state of checkboxes, radio buttons, and other widgets.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-checked).
+
+    div [ checked "true" ] [ text "Hello aria!" ]
+
+-}
+checked : String -> Attribute msg
+checked =
+    attribute "aria-checked"
+
+
+{-| Identifies the element (or elements) whose contents or presence are controlled by the current element.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-controls).
+
+    div [ controls "dropdown-menu" ] [ text "Hello aria!" ]
+
+-}
+controls : String -> Attribute msg
+controls =
+    attribute "aria-controls"
+
+
+{-| Identifies the element (or elements) that describes the object.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-describedby).
+
+    div [ describedby "id" ] [ text "Hello aria!" ]
+
+-}
+describedby : String -> Attribute msg
+describedby =
+    attribute "aria-describedby"
+
+
+{-| Indicates that the element is perceivable but disabled, so it is not editable or otherwise operable.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-disabled).
+
+    div [ disabled True ] [ text "Hello aria!" ]
+
+-}
+disabled : Bool -> Attribute msg
+disabled =
+    boolAttribute "aria-disabled"
+
+
+{-| Indicates whether the element, or another grouping element it controls, is currently expanded or collapsed.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-expanded).
+
+    div [ expanded "true" ] [ text "Hello aria!" ]
+
+-}
+expanded : String -> Attribute msg
+expanded =
+    attribute "aria-expanded"
+
+
+{-| Indicates the availability and type of interactive popup element, such as menu or dialog, that can be triggered by an element.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-haspopup).
+
+    div [ hasPopup "menu" ] [ text "Hello aria!" ]
+
+-}
+hasPopup : String -> Attribute msg
+hasPopup =
+    attribute "aria-haspopup"
+
+
+{-| Indicates that the element and all of its descendants are not visible or perceivable to any user as implemented by the author.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-hidden).
+
+    div [ hidden True ] [ text "Hello aria!" ]
+
+-}
+hidden : Bool -> Attribute msg
+hidden =
+    boolAttribute "aria-hidden"
+
+
+{-| Defines a string value that labels the current element.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-label).
+
+    div [ label "label" ] [ text "Hello aria!" ]
+
+-}
+label : String -> Attribute msg
+label =
+    attribute "aria-label"
+
+
+{-| Identifies the element (or elements) that labels the current element.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-labelledby).
+
+    div [ labelledby "id" ] [ text "Hello aria!" ]
+
+-}
+labelledby : String -> Attribute msg
+labelledby =
+    attribute "aria-labelledby"
+
+
+{-| Indicates that an element will be updated, and describes the types of updates the user agents,
+assistive technologies, and user can expect from the live region.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-live).
+
+    input [ live "assertive" ] []
+
+-}
+live : String -> Attribute msg
+live =
+    attribute "aria-live"
+
+
+{-| Indicates the current "pressed" state of toggle buttons.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-pressed).
+
+    button [ pressed True ] [ text "Submit" ]
+
+-}
+pressed : Bool -> Attribute msg
+pressed =
+    boolAttribute "aria-pressed"
+
+
+{-| Indicates that the element is not editable, but is otherwise operable.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-readonly).
+
+    div [ readonly True ] [ text "Hello aria!" ]
+
+-}
+readonly : Bool -> Attribute msg
+readonly =
+    boolAttribute "aria-readonly"
+
+
+{-| Indicates that user input is required on the element before a form may be submitted.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-required).
+
+    div [ required True ] [ text "Hello aria!" ]
+
+-}
+required : Bool -> Attribute msg
+required =
+    boolAttribute "aria-required"
+
+
+{-| Indicates the current "selected" state of various widgets.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-selected).
+
+    div [ selected "true" ] [ text "Hello aria!" ]
+
+-}
+selected : String -> Attribute msg
+selected =
+    attribute "aria-selected"
+
+
+{-| Indicates the current "selected" state of various widgets.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-selected).
+
+    div [ selected "true" ] [ text "Hello aria!" ]
+
+-}
+sort : String -> Attribute msg
+sort =
+    attribute "aria-sort"
+
+
+{-| Defines the maximum allowed value for a range widget.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-valuemax).
+
+    div [ valueMax 10, role "progressbar" ] []
+
+-}
+valueMax : Float -> Attribute msg
+valueMax =
+    floatAttribute "aria-valuemax"
+
+
+{-| Defines the minimum allowed value for a range widget.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-valuemin).
+
+    div [ valueMin 1, role "progressbar" ] []
+
+-}
+valueMin : Float -> Attribute msg
+valueMin =
+    floatAttribute "aria-valuemin"
+
+
+{-| Defines the current value for a range widget.
+See the [official specs](https://www.w3.org/TR/wai-aria-1.1/#aria-valuenow).
+
+    div [ valueNow 4, role "progressbar" ] []
+
+-}
+valueNow : Float -> Attribute msg
+valueNow =
+    floatAttribute "aria-valuenow"
+
+
+{-| An attribute to support the role classification of elements.
+See the [official specs](https://www.w3.org/TR/role-attribute).
+
+    div [ role "button" ] [ text "Submit" ]
+
+-}
+role : String -> Attribute msg
+role =
+    attribute "role"

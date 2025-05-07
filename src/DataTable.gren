@@ -1,0 +1,1095 @@
+module DataTable exposing
+    ( view
+    , config, stringColumn, intColumn, floatColumn, rowNumberColumn
+    , State, SortDirection(..), initialSort
+    , getSortState, updateSortState, updateMultiSortState, sortBy
+    , getSortedData
+    , paginatedView
+    , initialState, getPageSize, getRowCursor, updatePageSize, updateRowCursor
+    , getPaginatedData
+    , Column, customColumn, veryCustomColumn
+    , Sorter, unsortable, increasingBy, decreasingBy
+    , increasingOrDecreasingBy, decreasingOrIncreasingBy
+    , Config, customConfig, Customizations, HtmlDetails
+    , defaultCustomizations
+    , PaginationStyle, column, getDefaultPageSize, noPagination, pageLength, paginationWith, scrollingPaginationWith, simplePagination
+    )
+
+{-| This library helps you create sortable tables. The crucial feature is that it
+lets you own your data separately and keep it in whatever format is best for
+you. This way you are free to change your data without worrying about the table
+&ldquo;getting out of sync&rdquo; with the data. Having a single source of
+truth is pretty great!
+
+I recommend checking out the [examples] to get a feel for how it works.
+
+[examples]: https://github.com/billstclair/elm-sortable-table/tree/master/examples
+
+
+# View
+
+@docs view
+
+
+# Configuration
+
+@docs config, stringColumn, intColumn, floatColumn, rowNumberColumn
+
+
+# State
+
+@docs State, SortDirection, initialSort
+@docs getSortState, updateSortState, updateMultiSortState, sortBy
+
+
+# Sorted Data Access
+
+@docs getSortedData
+
+
+# Paginated Sorted Table
+
+@docs paginatedView
+@docs initialState, getPageSize, getRowCursor, updatePageSize, updateRowCursor
+@docs getPaginatedData
+
+
+# Crazy Customization
+
+If you are new to this library, you can probably stop reading here. After this
+point are a bunch of ways to customize your table further. If it does not
+provide what you need, you may just want to write a custom table yourself. It
+is not that crazy.
+
+
+## Custom Columns
+
+@docs Column, customColumn, veryCustomColumn
+@docs Sorter, unsortable, increasingBy, decreasingBy
+@docs increasingOrDecreasingBy, decreasingOrIncreasingBy
+
+
+## Custom Tables
+
+@docs Config, customConfig, Customizations, HtmlDetails, Status, PaginationStatus
+@docs defaultCustomizations
+
+-}
+
+import Html exposing (Attribute, Html)
+import Html.Attributes as A
+import Html.Attributes.Aria as Aria
+import Html.Events as E
+import Html.Keyed as Keyed
+import Html.Lazy as Lazy
+import Json.Decode
+import Math
+
+
+-- STATE
+
+
+{-| Tracks which column to sort by, in which direction, the page size and the
+position of the row cursor, as well as total number of rows of the whole
+(possibly remote) table. This type is opaque.
+-}
+type State
+    = State
+        { sortColumns: Array { sortColumnName: String, sortDirection: SortDirection }
+        , pageSize : Int
+        , rowCursor : Int
+        , pagination : PaginationStyle
+        , tableId : String
+        }
+
+{-| Simple boolean type for column sort direction. This type is not opaque and
+meant to be used by other modules when constructing Table State
+-}
+type SortDirection
+    = Asc
+    | Desc
+
+
+sortDirectionToString : SortDirection -> String
+sortDirectionToString sortDirection =
+    when sortDirection is
+        Asc ->
+            "Asc"
+
+        Desc ->
+            "Desc"
+
+
+{-| Create an initial state for a table without pagination. By providing a column
+name, you determine which column should be used for sorting by default. This is
+meant to be used for simple tables. More
+So if
+you want your table of yachts to be sorted by length by default, you might say:
+
+import Table
+
+    Table.initialSort "Length"
+
+-}
+initialSort : String -> State
+initialSort header =
+    State
+        { sortColumns = [ {sortColumnName = header, sortDirection = Asc } ]
+        , pageSize = 0
+        , rowCursor = 0
+        , pagination = NoPagination
+        , tableId = "sortableTable"
+        }
+
+
+{-| Create a table state for a paginated table. The name of the column to be
+sorted by default, followed by the desired page size and the total row count
+for the table. So if you want your table of countries sorted by population in
+descending order with 10 countries per page by default, you might say:
+
+import Table exposing (Asc, Desc)
+
+    Table.initialState "Population" Desc 10
+
+-}
+initialState : String -> PaginationStyle -> State
+initialState id paginationStyle =
+    let
+        f =
+            Maybe.withDefault 0 << Maybe.map .first << Array.popFirst
+
+        initialPageSize =
+            when paginationStyle is
+                NoPagination ->
+                    0
+
+                Pager pageSizes ->
+                    f pageSizes
+
+                Scroller pageSizes ->
+                    f pageSizes
+    in
+    when paginationStyle is
+        NoPagination ->
+            State {sortColumns = [], pageSize = 0, rowCursor = 0, pagination = NoPagination, tableId = id}
+
+        Pager pageSizes ->
+            State {sortColumns = [], pageSize = initialPageSize, rowCursor = 0, pagination = Pager pageSizes, tableId = id}
+
+        Scroller pageSizes ->
+            State {sortColumns = [], pageSize = initialPageSize, rowCursor = 0, pagination = Scroller pageSizes, tableId = id}
+
+
+{-| Inspect the current table state. Which column is being sorted by, and
+whether the sort order is ascending or descending. This could be useful for
+storing the sort state in a URL or somewhere else outside of Elm.
+-}
+getSortState : State -> Array { sortColumnName : String, sortDirection : SortDirection }
+getSortState (State {sortColumns}) =
+    sortColumns
+
+
+{-| Inspect the current table state. What is the current page size for the
+pagination. Showing "all rows" returns 0. This could be useful for storing
+the sort state in a URL or somewhere else outside of Elm.
+-}
+getPageSize : State -> Int
+getPageSize (State {pageSize}) =
+    pageSize
+
+
+getDefaultPageSize : State -> Int
+getDefaultPageSize (State {pagination}) =
+    let
+        f =
+            Maybe.withDefault 0 << Maybe.map .first << Array.popFirst
+    in
+    when pagination is
+        NoPagination ->
+            0
+
+        Pager pageSizes ->
+            f pageSizes
+
+        Scroller pageSizes ->
+            f pageSizes
+
+
+{-| Inspect the current table state. What is the current position of the row
+cursor. Together with the current page size this determines which table page
+is shown.
+-}
+getRowCursor : State -> Int
+getRowCursor (State {rowCursor}) =
+    rowCursor
+
+
+{-| Create a table state with a column to sort by, and whether to
+reverse the order. This allows a sort to be applied to URL params or
+somewhere else outside of Elm.
+**Deprecated function**: does not support pagination. Use updateSortState instead.
+This function will be removed in the next version of this package.
+-}
+sortBy : String -> Bool -> State
+sortBy headerName isReversed =
+    if isReversed then
+        State {sortColumns = [ { sortColumnName = headerName, sortDirection = Desc } ], pageSize = 0, rowCursor = 0, pagination = NoPagination, tableId = "sortableTable"}
+
+    else
+        State {sortColumns = [ { sortColumnName = headerName, sortDirection = Asc } ], pageSize = 0, rowCursor = 0, pagination = NoPagination, tableId = "sortableTable"}
+
+
+{-| -}
+updateSortState : String -> SortDirection -> State -> State
+updateSortState newSortColumn sortDirection (State {pageSize, rowCursor, pagination, tableId}) =
+    State {sortColumns = [ { sortColumnName = newSortColumn, sortDirection = sortDirection } ], pageSize = pageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId}
+
+
+{-| -}
+updateMultiSortState : String -> SortDirection -> State -> State
+updateMultiSortState newSortColumn sortDirection (State {sortColumns, pageSize, rowCursor, pagination, tableId}) =
+    let
+        newSortState =
+            [{ sortColumnName = newSortColumn, sortDirection = sortDirection }]
+                ++ Array.keepIf (\{ sortColumnName } -> sortColumnName /= newSortColumn) sortColumns
+    in
+    State {sortColumns = newSortState, pageSize = pageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId}
+
+
+updatePageSize : Int -> State -> State
+updatePageSize minimumNewPageSize (State {sortColumns, rowCursor, pagination, tableId}) =
+    let
+        nextHigherInList : Int -> Array Int -> Int
+        nextHigherInList input list =
+            when Array.popFirst <| Array.keepIf (\x -> x >= input) <| Array.sort list is
+                Just x ->
+                    .first x
+
+                Nothing ->
+                    0
+
+        newPageSize =
+            when pagination is
+                Pager list ->
+                    nextHigherInList minimumNewPageSize list
+
+                Scroller list ->
+                    nextHigherInList minimumNewPageSize list
+
+                NoPagination ->
+                    0
+    in
+    State {sortColumns = sortColumns, pageSize = newPageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId}
+
+
+updateRowCursor : Int -> State -> State
+updateRowCursor newRowCursor (State {sortColumns, pageSize,pagination, tableId}) =
+    State {sortColumns = sortColumns, pageSize = pageSize, rowCursor = newRowCursor, pagination = pagination, tableId = tableId}
+
+
+
+-- CONFIG
+
+
+{-| Configuration for your table, describing your columns.
+
+**Note:** Your `Config` should _never_ be held in your model.
+It should only appear in `view` code.
+
+-}
+type Config data msg
+    = Config
+        { toId : data -> String
+        , toMsg : State -> msg
+        , columns : Array (ColumnData data msg)
+        , customizations : Customizations data msg
+        }
+
+
+{-| Create the `Config` for your `view` function. Everything you need to
+render your columns efficiently and handle selection of columns.
+
+Say we have a `Array Person` that we want to show as a table. The table should
+have a column for name and age. We would create a `Config` like this:
+
+    import Table
+
+    type Msg = NewTableState State | ...
+
+    config : Table.Config Person Msg
+    config =
+      Table.config
+        { toId = .name
+        , toMsg = NewTableState
+        , columns =
+            [ Table.stringColumn "Name" .name
+            , Table.intColumn "Age" .age
+            ]
+        }
+
+You provide the following information in your table configuration:
+
+  - `toId` &mdash; turn a `Person` into a unique ID. This lets us use
+    [`Html.Keyed`][keyed] under the hood to make re-sorts faster.
+  - `columns` &mdash; specify some columns to show.
+  - `toMsg` &mdash; a way to send new table states to your app as messages.
+
+See the [examples] to get a better feel for this!
+
+[keyed]: http://package.elm-lang.org/packages/elm-lang/html/latest/Html-Keyed
+[examples]: https://github.com/billstclair/elm-sortable-table/tree/master/examples
+
+-}
+config :
+    { toId : data -> String
+    , toMsg : State -> msg
+    , columns : Array (Column data msg)
+    }
+    -> Config data msg
+config { toId, toMsg, columns } =
+    Config
+        { toId = toId
+        , toMsg = toMsg
+        , columns = Array.map (\(Column cData) -> cData) columns
+        , customizations = defaultCustomizations
+        }
+
+
+{-| Just like `config` but you can specify a bunch of table customizations.
+-}
+customConfig :
+    { toId : data -> String
+    , toMsg : State -> msg
+    , columns : Array (Column data msg)
+    , customizations : Customizations data msg
+    }
+    -> Config data msg
+customConfig { toId, toMsg, columns, customizations } =
+    Config
+        { toId = toId
+        , toMsg = toMsg
+        , columns = Array.map (\(Column cData) -> cData) columns
+        , customizations = customizations
+        }
+
+
+{-| There are quite a lot of ways to customize the `<table>` tag. You can add
+a `<caption>` which can be styled via CSS. You can do crazy stuff with
+`<thead>` to group columns in weird ways. You can have a `<tfoot>` tag for
+summaries of various columns. And maybe you want to put attributes on `<tbody>`
+or on particular rows in the body. All these customizations are available to you.
+
+**Note:** The level of craziness possible in `<thead>` and `<tfoot>` are so
+high that I could not see how to provide the full functionality _and_ make it
+impossible to do bad stuff. So just be aware of that, and share any stories
+you have. Stories make it possible to design better!
+
+-}
+type alias Customizations data msg =
+    { beforeAndAfterTable : { before: Maybe (Html msg), after : Maybe (Html msg) }
+    , tableAttrs : Array (Attribute msg)
+    , caption : Maybe (HtmlDetails msg)
+    , colgroup : Array (HeaderInfo msg) -> Maybe (HtmlDetails msg)
+    , thead : Array (HeaderInfo msg) -> HtmlDetails msg
+    , tbodyAttrs : Array (Attribute msg)
+    , rowAttrs : (State -> msg) -> State -> data -> Array (Attribute msg)
+    , tfoot : Maybe (HtmlDetails msg)
+    }
+
+
+{-| Sometimes you must use a `<td>` tag, but the attributes and children are up
+to you. This type lets you specify all the details of an HTML node except the
+tag name.
+-}
+type alias HtmlDetails msg =
+    { attributes : Array (Attribute msg)
+    , children : Array (Html msg)
+    }
+
+
+{-| The customizations used in `config` by default.
+-}
+defaultCustomizations : Customizations data msg
+defaultCustomizations =
+    { beforeAndAfterTable = { before = Nothing, after = Nothing }
+    , tableAttrs = [ A.class "dataTable" ]
+    , caption = Nothing
+    , colgroup = \_ -> Nothing
+    , thead = defaultTableHeader
+    , tbodyAttrs = []
+    , rowAttrs = simpleRowAttrs
+    , tfoot = Nothing
+    }
+
+
+defaultTableHeader : Array (HeaderInfo msg) -> HtmlDetails msg
+defaultTableHeader headerInfos =
+    let
+        defaultTH : HeaderInfo msg -> Html msg
+        defaultTH { name, selected, sortDirections, clickActions } =
+            let
+                columnTitle =
+                    Html.span [ A.class "dt-column-title" ] [ Html.text name ]
+
+                columnOrder =
+                    if Array.length sortDirections > 0 then
+                        Html.span
+                            [ A.classList [ { class = "dt-column-order", enabled = True } ]
+                            , Aria.label <| "Click here to sort by this column"
+                            , A.attribute "role" "button"
+                            , A.tabindex 0
+                            ]
+                            []
+
+                    else
+                        Html.text ""
+
+                canBeSorted : SortDirection -> Bool
+                canBeSorted sortDirection =
+                    Array.member sortDirection sortDirections
+
+                isSorted : SortDirection -> Bool
+                isSorted viewedSortDirection =
+                    when selected is
+                        Just { sortDirection } ->
+                            viewedSortDirection == sortDirection
+
+                        Nothing ->
+                            False
+
+                ariaSort =
+                    when selected is
+                        Just { sortDirection } ->
+                            [ Aria.sort <| sortDirectionToString sortDirection ]
+
+                        Nothing ->
+                            []
+
+                rowAndColSpan =
+                    [ A.rowspan 1, A.colspan 1 ]
+
+                thClasses =
+                    [ A.classList
+                        [ {class = "dt-orderable-asc", enabled = canBeSorted Asc }
+                        , {class = "dt-orderable-desc", enabled = canBeSorted Desc }
+                        , {class = "dt-ordering-asc", enabled = isSorted Asc }
+                        , {class = "dt-ordering-desc", enabled = isSorted Desc }
+                        , {class = "dt-ordering-none", enabled = not (isSorted Asc) && not (isSorted Desc) }
+                        ]
+                    ]
+
+                thAttributes =
+                    clickActions ++ ariaSort ++ rowAndColSpan ++ thClasses
+            in
+            Html.th thAttributes [ Html.div [ A.class "dt-column-header" ] [ columnTitle, columnOrder ] ]
+    in
+    { attributes =[], children =[ Html.tr [] <| Array.map defaultTH headerInfos ] }
+
+
+simpleRowAttrs : (State -> msg) -> State -> data -> Array (Attribute msg)
+simpleRowAttrs toMsg state _ =
+    let
+        is_current_row =
+            if 0 == getRowCursor state then
+                False
+
+            else
+                False
+    in
+    if is_current_row then
+        [ A.style "background" "#CEFAF8" ]
+
+    else
+        [ E.onClick <| toMsg <| updateRowCursor 0 state ]
+
+
+
+-- COLUMNS
+
+
+{-| Describes how to turn `data` into a column in your table.
+-}
+type Column data msg
+    = Column (ColumnData data msg)
+
+
+type alias ColumnData data msg =
+    { name : String
+    , viewData : data -> HtmlDetails msg
+    , sorter : Sorter data
+    }
+
+columnData name viewData sorter =
+    { name = name
+    , viewData = viewData
+    , sorter = sorter
+    }
+
+type alias ColumnHeader data =
+    { name : String
+    , sorter : Sorter data
+    }
+
+
+toHeader : ColumnData data msg -> ColumnHeader data
+toHeader { name, sorter } =
+    { name = name, sorter = sorter }
+
+
+{-| -}
+stringColumn : String -> (data -> String) -> Column data msg
+stringColumn name toStr =
+    Column
+        { name = name
+        , viewData = textDetails << toStr
+        , sorter = increasingOrDecreasingBy toStr
+        }
+
+
+{-| -}
+intColumn : String -> (data -> Int) -> Column data msg
+intColumn name toInt =
+    Column
+        { name = name
+        , viewData = textDetails << String.fromInt << toInt
+        , sorter = decreasingBy toInt
+        }
+
+
+{-| -}
+floatColumn : String -> (data -> Float) -> Column data msg
+floatColumn name toFloat =
+    Column
+        { name = name
+        , viewData = textDetails << String.fromFloat << toFloat
+        , sorter = increasingOrDecreasingBy toFloat
+        }
+
+
+{-| -}
+rowNumberColumn : String -> Column data msg
+rowNumberColumn name =
+    customColumn
+        { name = name
+        , viewData = \_ -> "rowNumber"
+        , sorter = RowNumber
+        }
+
+
+column : ((data -> comparable) -> Sorter data) -> String -> (data -> String) -> (data -> comparable) -> Column data msg
+column sorter name toString toComparable =
+    customColumn { name = name, viewData = toString, sorter = sorter toComparable }
+
+
+textDetails : String -> HtmlDetails msg
+textDetails str =
+    { attributes = [], children = [ Html.text str ] }
+
+
+{-| Perhaps the basic columns are not quite what you want. Maybe you want to
+display monetary values in thousands of dollars, and `floatColumn` does not
+quite cut it. You could define a custom column like this:
+
+    import Table
+
+    dollarColumn : String -> (data -> Float) -> Column data msg
+    dollarColumn name toDollars =
+        Table.customColumn
+            { name = name
+            , viewData = \data -> viewDollars (toDollars data)
+            , sorter = Table.decreasingBy toDollars
+            }
+
+    viewDollars : Float -> String
+    viewDollars dollars =
+        "$" ++ String.fromInt (round (dollars / 1000)) ++ "k"
+
+The `viewData` field means we will displays the number `12345.67` as `$12k`.
+
+The `sorter` field specifies how the column can be sorted. In `dollarColumn` we
+are saying that it can _only_ be shown from highest-to-lowest monetary value.
+More about sorters soon!
+
+-}
+customColumn :
+    { name : String
+    , viewData : data -> String
+    , sorter : Sorter data
+    }
+    -> Column data msg
+customColumn { name, viewData, sorter } =
+    Column <|
+        columnData name (textDetails << viewData) sorter
+
+
+{-| It is _possible_ that you want something crazier than `customColumn`. In
+that unlikely scenario, this function lets you have full control over the
+attributes and children of each `<td>` cell in this column.
+
+So maybe you want to a dollars column, and the dollar signs should be green.
+
+    import Html exposing (Attribute, Html, span, text)
+    import Html.Attributes exposing (style)
+    import Table
+
+    dollarColumn : String -> (data -> Float) -> Column data msg
+    dollarColumn name toDollars =
+        Table.veryCustomColumn
+            { name = name
+            , viewData = \data -> viewDollars (toDollars data)
+            , sorter = Table.decreasingBy toDollars
+            }
+
+    viewDollars : Float -> Table.HtmlDetails msg
+    viewDollars dollars =
+        Table.HtmlDetails []
+            [ span [ style "color" "green" ] [ text "$" ]
+            , text (String.fromInt (round (dollars / 1000)) ++ "k")
+            ]
+
+-}
+veryCustomColumn :
+    { name : String
+    , viewData : data -> HtmlDetails msg
+    , sorter : Sorter data
+    }
+    -> Column data msg
+veryCustomColumn =
+    Column
+
+
+
+-- VIEW
+
+
+{-| Take a list of data and turn it into a table. The `Config` argument is the
+configuration for the table. It describes the columns that we want to show. The
+`State` argument describes which column we are sorting by at the moment.
+
+**Note:** The `State` and `Array data` should live in your `Model`. The `Config`
+for the table belongs in your `view` code. I very strongly recommend against
+putting `Config` in your model. Describe any potential table configurations
+statically, and look for a different library if you need something crazier than
+that.
+
+-}
+view : Config data msg -> State -> Array data -> Html msg
+view conf (State {sortColumns, rowCursor, tableId}) data =
+    paginatedView conf (State {sortColumns = sortColumns, pageSize = 0, rowCursor = rowCursor, pagination = NoPagination, tableId = tableId}) data
+
+
+paginatedView : Config data msg -> State -> Array data -> Html msg
+paginatedView ((Config { toId, toMsg, columns, customizations }) as conf) state data =
+    let
+        rows =
+            getPaginatedData state <| getSortedData conf state data
+
+        headers =
+            Array.map toHeader columns
+
+        theadDetails =
+            customizations.thead <| Array.map (toHeaderInfo state toMsg) headers
+
+        thead =
+            Html.thead theadDetails.attributes theadDetails.children
+
+        tbody =
+            Keyed.node "tbody" customizations.tbodyAttrs <|
+                Array.map (viewRow toId toMsg columns customizations.rowAttrs state) rows
+
+        withFoot =
+            when customizations.tfoot is
+                Nothing ->
+                    [ tbody ]
+
+                Just { attributes, children } ->
+                    [ Html.tfoot attributes children, tbody ]
+    in
+    Html.table customizations.tableAttrs <|
+        when customizations.caption is
+            Nothing ->
+                [ thead ] ++ withFoot
+
+            Just { attributes, children } ->
+                [Html.caption attributes children] ++ [thead] ++ withFoot
+
+
+type alias HeaderInfo msg =
+    { name : String
+    , selected : Maybe { sortRank : Int, sortDirection : SortDirection } -- Nothing if not selected, otherwise Just {sortRank, sortDirection}
+    , sortDirections : Array SortDirection -- Empty if Unsortable
+    , clickActions : Array (Attribute msg)
+    }
+
+headerInfo name selected sortDirections clickActions =
+    { name = name
+    , selected = selected
+    , sortDirections = sortDirections
+    , clickActions = clickActions
+    }
+
+toHeaderInfo : State -> (State -> msg) -> ColumnHeader data -> HeaderInfo msg
+toHeaderInfo ((State {sortColumns}) as state) toMsg { name, sorter } =
+    let
+        reverse a =
+            when a is
+                Desc ->
+                    Asc
+
+                Asc ->
+                    Desc
+
+        selected =
+            when sortColumns is
+                [] ->
+                    Nothing
+
+                nonEmptyList ->
+                    let
+                        indexedList : Array ( { left : Int, right : { sortColumnName : String, sortDirection : SortDirection }})
+                        indexedList =
+                            Array.indexedMap (\idx val -> { left = idx, right = val}) <| Array.reverse nonEmptyList
+
+                        filteredList =
+                            Array.keepIf (\{ right = { sortColumnName } } -> name == sortColumnName ) indexedList
+                    in
+                    when Array.takeFirst 1 filteredList is
+                        [{ left = index, right = { sortDirection }} ] ->
+                            Just { sortDirection = sortDirection, sortRank = index }
+
+                        _ -> Nothing
+
+        reversedSortDirection =
+            when selected is
+                Just { sortDirection } ->
+                    reverse sortDirection
+
+                Nothing ->
+                    when sorter is
+                        DecOrInc _ ->
+                            Desc
+
+                        _ ->
+                            Asc
+    in
+    when sorter is
+        None ->
+            headerInfo name Nothing [] []
+
+        RowNumber ->
+            headerInfo name Nothing [] []
+
+        Increasing _ ->
+            headerInfo name selected [ Asc ] <| onColumnHeader state name Asc toMsg
+
+        Decreasing _ ->
+            headerInfo name selected [ Desc ] <| onColumnHeader state name Desc toMsg
+
+        IncOrDec _ ->
+            headerInfo name selected [ Asc, Desc ] <| onColumnHeader state name reversedSortDirection toMsg
+
+        DecOrInc _ ->
+            headerInfo name selected [ Desc, Asc ] <| onColumnHeader state name reversedSortDirection toMsg
+
+
+onColumnHeader : State -> String -> SortDirection -> (State -> msg) -> Array (Attribute msg)
+onColumnHeader state name sortDirection toMsg =
+    [ E.onClick <|
+        toMsg <|
+            updateMultiSortState name sortDirection state
+    , E.onDoubleClick <|
+        toMsg <|
+            updateSortState name sortDirection state
+    ]
+
+
+viewRow : (data -> String) -> (State -> msg) -> Array (ColumnData data msg) -> ((State -> msg) -> State -> data -> Array (Attribute msg)) -> State -> data -> { key : String, node : Html msg }
+viewRow toId toMsg columns toRowAttrs state data =
+    { key = toId data
+    , node = Lazy.lazy5 viewRowHelp columns toRowAttrs toMsg state data
+    }
+
+
+viewRowHelp : Array (ColumnData data msg) -> ((State -> msg) -> State -> data -> Array (Attribute msg)) -> (State -> msg) -> State -> data -> Html msg
+viewRowHelp columns toRowAttrs toMsg state data =
+    Html.tr (toRowAttrs toMsg state data) <|
+        Array.map (viewCell data ) columns
+
+
+viewCell : data -> ColumnData data msg -> Html msg
+viewCell data { viewData, sorter } =
+    let
+        details =
+            viewData data
+    in
+    Lazy.lazy2 Html.td details.attributes details.children
+
+
+
+-- SORTING
+
+
+sort : State -> Array (ColumnData data msg) -> Array data -> Array data
+sort (State {sortColumns, pageSize, rowCursor, pagination, tableId}) cData data =
+    when Array.popFirst sortColumns is
+        Just { first = { sortColumnName,sortDirection}, rest = rest } ->
+            when findSorter sortColumnName cData is
+                Nothing ->
+                    data
+
+                Just sorter ->
+                    sort (State {sortColumns = rest, pageSize = pageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId}) cData <| applySorter sortDirection sorter data
+
+        Nothing ->
+            data
+
+
+applySorter : SortDirection -> Sorter data -> Array data -> Array data
+applySorter sortDirection sorter data =
+    when sorter is
+        None ->
+            data
+
+        RowNumber ->
+            data
+
+        Increasing srt ->
+            srt data
+
+        Decreasing srt ->
+            Array.reverse (srt data)
+
+        IncOrDec srt ->
+            if sortDirection == Desc then
+                Array.reverse (srt data)
+
+            else
+                srt data
+
+        DecOrInc srt ->
+            if sortDirection == Desc then
+                srt data
+
+            else
+                Array.reverse (srt data)
+
+
+findSorter : String -> Array (ColumnData data msg) -> Maybe (Sorter data)
+findSorter selectedColumn cData =
+    when Array.popFirst cData is
+        Nothing ->
+            Nothing
+
+        Just {first = { name, sorter }, rest} ->
+            if name == selectedColumn then
+                Just sorter
+
+            else
+                findSorter selectedColumn rest
+
+
+{-| Return the data sorted exactly as it will be displayed on the screen.
+-}
+getSortedData : Config data msg -> State -> Array data -> Array data
+getSortedData (Config { columns }) state data =
+    sort state columns data
+
+
+
+-- SORTERS
+
+
+{-| Specifies a particular way of sorting data.
+-}
+type Sorter data
+    = None
+    | RowNumber
+    | Increasing (Array data -> Array data)
+    | Decreasing (Array data -> Array data)
+    | IncOrDec (Array data -> Array data)
+    | DecOrInc (Array data -> Array data)
+
+
+{-| A sorter for columns that are unsortable. Maybe you have a column in your
+table for delete buttons that delete the row. It would not make any sense to
+sort based on that column.
+-}
+unsortable : Sorter data
+unsortable =
+    None
+
+
+{-| Create a sorter that can only display the data in increasing order. If we
+want a table of people, sorted alphabetically by name, we would say this:
+
+    sorter : Sorter { a | name : comparable }
+    sorter =
+        increasingBy .name
+
+-}
+increasingBy : (data -> comparable) -> Sorter data
+increasingBy toComparable =
+    Increasing (Array.sortBy toComparable)
+
+
+{-| Create a sorter that can only display the data in decreasing order. If we
+want a table of countries, sorted by population from highest to lowest, we
+would say this:
+
+    sorter : Sorter { a | population : comparable }
+    sorter =
+        decreasingBy .population
+
+-}
+decreasingBy : (data -> comparable) -> Sorter data
+decreasingBy toComparable =
+    Decreasing (Array.sortBy toComparable)
+
+
+{-| Sometimes you want to be able to sort data in increasing _or_ decreasing
+order. Maybe you have a bunch of data about orange juice, and you want to know
+both which has the most sugar, and which has the least sugar. Both interesting!
+This function lets you see both, starting with decreasing order.
+
+    sorter : Sorter { a | sugar : comparable }
+    sorter =
+        decreasingOrIncreasingBy .sugar
+
+-}
+decreasingOrIncreasingBy : (data -> comparable) -> Sorter data
+decreasingOrIncreasingBy toComparable =
+    DecOrInc (Array.sortBy toComparable)
+
+
+{-| Sometimes you want to be able to sort data in increasing _or_ decreasing
+order. Maybe you have race times for the 100 meter sprint. This function lets
+sort by best time by default, but also see the other order.
+
+    sorter : Sorter { a | time : comparable }
+    sorter =
+        increasingOrDecreasingBy .time
+
+-}
+increasingOrDecreasingBy : (data -> comparable) -> Sorter data
+increasingOrDecreasingBy toComparable =
+    IncOrDec (Array.sortBy toComparable)
+
+
+type PaginationStyle
+    = NoPagination
+    | Pager (Array Int)
+    | Scroller (Array Int)
+
+
+noPagination : PaginationStyle
+noPagination =
+    NoPagination
+
+
+simplePagination : PaginationStyle
+simplePagination =
+    Pager [ 10, 25, 50, 100 ]
+
+
+paginationWith : Int -> Array Int -> PaginationStyle
+paginationWith defaultPageSize otherPageSizes =
+    Pager <| [defaultPageSize] ++ otherPageSizes
+
+
+scrollingPaginationWith : Int -> Array Int -> PaginationStyle
+scrollingPaginationWith defaultPageSize otherPageSizes =
+    Scroller <| [defaultPageSize] ++ otherPageSizes
+
+
+getPaginatedData : State -> Array data -> Array data
+getPaginatedData (State {pageSize, rowCursor, pagination}) data =
+    let
+        precedingFullPages =
+            (rowCursor - 1) // pageSize
+
+        lastRowOnPage =
+            when pagination is
+                Pager _ ->
+                    when pageSize is
+                        -- page size 0 means show all rows was chosen from page size options
+                        0 ->
+                            Array.length data
+
+                        _ ->
+                            (precedingFullPages + 1) * pageSize
+
+                Scroller _ ->
+                    if pageSize == 0 then
+                        Array.length data
+
+                    else
+                        when compare rowCursor (pageSize // 2) is
+                            GT ->
+                                rowCursor + pageSize // 2
+
+                            _ ->
+                                pageSize
+
+                NoPagination ->
+                    Array.length data
+
+        lastRowBeforePage =
+            when pagination is
+                Pager _ ->
+                    precedingFullPages * pageSize
+
+                Scroller _ ->
+                    when compare rowCursor <| Array.length data - pageSize // 2 is
+                        GT ->
+                            Array.length data - pageSize
+
+                        _ ->
+                            if isEven pageSize && pageSize /= 0 then
+                                rowCursor - pageSize // 2
+
+                            else
+                                rowCursor - pageSize // 2 - 1
+
+                NoPagination ->
+                    0
+    in
+    data
+        |> Array.takeFirst lastRowOnPage
+        |> Array.dropFirst lastRowBeforePage
+
+
+pageLength : Config data msg -> State -> Html msg
+pageLength (Config { toMsg }) ((State {pagination}) as tableState) =
+    let
+        onPageSizeChoice : State -> Html.Attribute msg
+        onPageSizeChoice state =
+            E.on "change" <|
+                Json.Decode.map (\newPageSize -> toMsg <| updatePageSize newPageSize state) <|
+                    Json.Decode.map (Maybe.withDefault 0 << String.toInt) <|
+                        E.targetValue
+
+        viewOption values =
+            Array.foldr
+                (\val html ->
+                    [ Html.option [ A.value val, A.selected <| (String.fromInt <| getPageSize tableState) == val ] [ Html.text val ]
+                    ]    ++ html
+                )
+                []
+            <|
+                Array.map String.fromInt values
+    in
+    Html.select [ onPageSizeChoice tableState ] <|
+        when pagination is
+            Pager values ->
+                viewOption values
+
+            Scroller values ->
+                viewOption values
+
+            _ ->
+                []
+
+
+isEven : Int -> Bool
+isEven int =
+    Math.modBy 2 int == 0
