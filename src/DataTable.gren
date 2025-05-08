@@ -552,7 +552,7 @@ intColumn name toInt =
     Column
         { name = name
         , viewData = textDetails << String.fromInt << toInt
-        , sorter = decreasingBy toInt
+        , sorter = increasingOrDecreasingBy toInt
         }
 
 
@@ -806,7 +806,7 @@ onColumnHeader state name sortDirection toMsg =
 viewRow : (data -> String) -> (State -> msg) -> Array (ColumnData data msg) -> ((State -> msg) -> State -> data -> Array (Attribute msg)) -> State -> data -> { key : String, node : Html msg }
 viewRow toId toMsg columns toRowAttrs state data =
     { key = toId data
-    , node = Lazy.lazy5 viewRowHelp columns toRowAttrs toMsg state data
+    , node = viewRowHelp columns toRowAttrs toMsg state data
     }
 
 
@@ -822,7 +822,7 @@ viewCell data { viewData, sorter } =
         details =
             viewData data
     in
-    Lazy.lazy2 Html.td details.attributes details.children
+    Html.td details.attributes details.children
 
 
 
