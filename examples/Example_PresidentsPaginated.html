@@ -1,0 +1,19 @@
+<!doctype html>
+
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="stylesheet" type="text/css" href="assets/datatables.css" />
+        <title>Datatables for Gren</title>
+        <script type="text/javascript" src="generated/elm.js"></script>
+    </head>
+
+    <body>
+        <div id="presidents-paginated"></div>
+        <script type="text/javascript">
+            Gren.PresidentsPaginated.init({
+                node: document.getElementById("presidents-paginated"),
+            });
+        </script>
+    </body>
+</html>
