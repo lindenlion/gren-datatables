@@ -1,10 +1,11 @@
 module Presidents exposing (Model, Msg(..), Person, config, init, main, presidents, update, view)
 
 import Browser
-import Html exposing (Html, div, h1, input, text, ul, li)
+import DataTable as Table
+import Html exposing (Html, div, h1, input, li, text, ul)
 import Html.Attributes exposing (placeholder)
 import Html.Events exposing (onInput)
-import DataTable as Table
+
 
 main : Program {} Model Msg
 main =
@@ -79,11 +80,11 @@ view { people, tableState, query } =
         [ h1 [] [ text "Birthplaces of U.S. Presidents" ]
         , ul []
             [ li [] [ text "Single click on column header to add/move that column to the end of the sort order (...then sort by Year)" ]
-            , li [] [ text "Double click to reset the sort order to just that column (Sort by Name)."]
-            , li [] [ text "I don't like this user interaction, but it is, what it is for now. Suggestions for change welcome."]
-            , li [] [ text "I'd prefer to make short click reset and long click add to sort order."]
-          ]
-        , div [][]
+            , li [] [ text "Double click to reset the sort order to just that column (Sort by Name)." ]
+            , li [] [ text "I don't like this user interaction, but it is, what it is for now. Suggestions for change welcome." ]
+            , li [] [ text "I'd prefer to make short click reset and long click add to sort order." ]
+            ]
+        , div [] []
         , input [ placeholder "Search by Name", onInput SetQuery ] []
         , Table.view config tableState acceptablePeople
         ]
@@ -114,8 +115,10 @@ type alias Person =
     , state : String
     }
 
+
 person name year city state =
     { name = name, year = year, city = city, state = state }
+
 
 presidents : Array Person
 presidents =

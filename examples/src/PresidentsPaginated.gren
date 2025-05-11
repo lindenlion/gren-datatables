@@ -1,10 +1,11 @@
 module PresidentsPaginated exposing (Model, Msg(..), Person, config, init, main, presidents, update, view)
 
 import Browser
-import Html exposing (Html, div, h1, input, text, ul, li)
+import DataTable as Table exposing (SortDirection(..))
+import Html exposing (Html, div, h1, input, li, text, ul)
 import Html.Attributes exposing (placeholder)
 import Html.Events exposing (onInput)
-import DataTable as Table exposing (SortDirection(..))
+
 
 main : Program {} Model Msg
 main =
@@ -33,10 +34,9 @@ init people =
         model =
             { people = people
             , tableState =
-                Table.initialState "Presidents" (Table.simplePagination)
-                |>  Table.updateSortState "State" Desc
-                |>  Table.updateMultiSortState "Year" Asc
-
+                Table.initialState "Presidents" Table.simplePagination
+                    |> Table.updateSortState "State" Desc
+                    |> Table.updateMultiSortState "Year" Asc
             , query = ""
             }
     in
@@ -83,11 +83,11 @@ view { people, tableState, query } =
         [ h1 [] [ text "Birthplaces of U.S. Presidents" ]
         , ul []
             [ li [] [ text "Single click on column header to add/move that column to the end of the sort order (...then sort by Year)" ]
-            , li [] [ text "Double click to reset the sort order to just that column (Sort by Name)."]
-            , li [] [ text "I don't like this user interaction, but it is, what it is for now. Suggestions for change welcome."]
-            , li [] [ text "I'd prefer to make short click reset and long click add to sort order."]
-          ]
-        , div [][]
+            , li [] [ text "Double click to reset the sort order to just that column (Sort by Name)." ]
+            , li [] [ text "I don't like this user interaction, but it is, what it is for now. Suggestions for change welcome." ]
+            , li [] [ text "I'd prefer to make short click reset and long click add to sort order." ]
+            ]
+        , div [] []
         , input [ placeholder "Search by Name", onInput SetQuery ] []
         , Table.pageLength config tableState
         , Table.paginatedView config tableState acceptablePeople
@@ -119,8 +119,10 @@ type alias Person =
     , state : String
     }
 
+
 person name year city state =
     { name = name, year = year, city = city, state = state }
+
 
 presidents : Array Person
 presidents =
