@@ -34,7 +34,7 @@ It may not be obvious at first glance, but this library follows The Elm Architec
 
   - `init` &mdash; You initialize the model with `DataTable.new`.
 
-  - `view` &mdash; You turn the current state into HTML with `DataTable.view*` function(s).
+  - `view` &mdash; You turn the current state into HTML with a `DataTable.view*` function.
 
   - `update` &mdash; This is a little hidden, but it is there. When you create a `DataTable.Config`, you provide a function `DataTable.State -> msg` so that the rendered table has a chance to update the table state, even when a part of the view is customized.
 
