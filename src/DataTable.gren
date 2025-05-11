@@ -86,6 +86,7 @@ import Json.Decode
 import Math
 
 
+
 -- STATE
 
 
@@ -95,12 +96,13 @@ position of the row cursor, as well as total number of rows of the whole
 -}
 type State
     = State
-        { sortColumns: Array { sortColumnName: String, sortDirection: SortDirection }
+        { sortColumns : Array { sortColumnName : String, sortDirection : SortDirection }
         , pageSize : Int
         , rowCursor : Int
         , pagination : PaginationStyle
         , tableId : String
         }
+
 
 {-| Simple boolean type for column sort direction. This type is not opaque and
 meant to be used by other modules when constructing Table State
@@ -134,7 +136,7 @@ import Table
 initialSort : String -> State
 initialSort header =
     State
-        { sortColumns = [ {sortColumnName = header, sortDirection = Asc } ]
+        { sortColumns = [ { sortColumnName = header, sortDirection = Asc } ]
         , pageSize = 0
         , rowCursor = 0
         , pagination = NoPagination
@@ -171,13 +173,13 @@ initialState id paginationStyle =
     in
     when paginationStyle is
         NoPagination ->
-            State {sortColumns = [], pageSize = 0, rowCursor = 0, pagination = NoPagination, tableId = id}
+            State { sortColumns = [], pageSize = 0, rowCursor = 0, pagination = NoPagination, tableId = id }
 
         Pager pageSizes ->
-            State {sortColumns = [], pageSize = initialPageSize, rowCursor = 0, pagination = Pager pageSizes, tableId = id}
+            State { sortColumns = [], pageSize = initialPageSize, rowCursor = 0, pagination = Pager pageSizes, tableId = id }
 
         Scroller pageSizes ->
-            State {sortColumns = [], pageSize = initialPageSize, rowCursor = 0, pagination = Scroller pageSizes, tableId = id}
+            State { sortColumns = [], pageSize = initialPageSize, rowCursor = 0, pagination = Scroller pageSizes, tableId = id }
 
 
 {-| Inspect the current table state. Which column is being sorted by, and
@@ -185,7 +187,7 @@ whether the sort order is ascending or descending. This could be useful for
 storing the sort state in a URL or somewhere else outside of Elm.
 -}
 getSortState : State -> Array { sortColumnName : String, sortDirection : SortDirection }
-getSortState (State {sortColumns}) =
+getSortState (State { sortColumns }) =
     sortColumns
 
 
@@ -194,12 +196,12 @@ pagination. Showing "all rows" returns 0. This could be useful for storing
 the sort state in a URL or somewhere else outside of Elm.
 -}
 getPageSize : State -> Int
-getPageSize (State {pageSize}) =
+getPageSize (State { pageSize }) =
     pageSize
 
 
 getDefaultPageSize : State -> Int
-getDefaultPageSize (State {pagination}) =
+getDefaultPageSize (State { pagination }) =
     let
         f =
             Maybe.withDefault 0 << Maybe.map .first << Array.popFirst
@@ -220,7 +222,7 @@ cursor. Together with the current page size this determines which table page
 is shown.
 -}
 getRowCursor : State -> Int
-getRowCursor (State {rowCursor}) =
+getRowCursor (State { rowCursor }) =
     rowCursor
 
 
@@ -233,31 +235,31 @@ This function will be removed in the next version of this package.
 sortBy : String -> Bool -> State
 sortBy headerName isReversed =
     if isReversed then
-        State {sortColumns = [ { sortColumnName = headerName, sortDirection = Desc } ], pageSize = 0, rowCursor = 0, pagination = NoPagination, tableId = "sortableTable"}
+        State { sortColumns = [ { sortColumnName = headerName, sortDirection = Desc } ], pageSize = 0, rowCursor = 0, pagination = NoPagination, tableId = "sortableTable" }
 
     else
-        State {sortColumns = [ { sortColumnName = headerName, sortDirection = Asc } ], pageSize = 0, rowCursor = 0, pagination = NoPagination, tableId = "sortableTable"}
+        State { sortColumns = [ { sortColumnName = headerName, sortDirection = Asc } ], pageSize = 0, rowCursor = 0, pagination = NoPagination, tableId = "sortableTable" }
 
 
 {-| -}
 updateSortState : String -> SortDirection -> State -> State
-updateSortState newSortColumn sortDirection (State {pageSize, rowCursor, pagination, tableId}) =
-    State {sortColumns = [ { sortColumnName = newSortColumn, sortDirection = sortDirection } ], pageSize = pageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId}
+updateSortState newSortColumn sortDirection (State { pageSize, rowCursor, pagination, tableId }) =
+    State { sortColumns = [ { sortColumnName = newSortColumn, sortDirection = sortDirection } ], pageSize = pageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId }
 
 
 {-| -}
 updateMultiSortState : String -> SortDirection -> State -> State
-updateMultiSortState newSortColumn sortDirection (State {sortColumns, pageSize, rowCursor, pagination, tableId}) =
+updateMultiSortState newSortColumn sortDirection (State { sortColumns, pageSize, rowCursor, pagination, tableId }) =
     let
         newSortState =
-            [{ sortColumnName = newSortColumn, sortDirection = sortDirection }]
+            [ { sortColumnName = newSortColumn, sortDirection = sortDirection } ]
                 ++ Array.keepIf (\{ sortColumnName } -> sortColumnName /= newSortColumn) sortColumns
     in
-    State {sortColumns = newSortState, pageSize = pageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId}
+    State { sortColumns = newSortState, pageSize = pageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId }
 
 
 updatePageSize : Int -> State -> State
-updatePageSize minimumNewPageSize (State {sortColumns, rowCursor, pagination, tableId}) =
+updatePageSize minimumNewPageSize (State { sortColumns, rowCursor, pagination, tableId }) =
     let
         nextHigherInList : Int -> Array Int -> Int
         nextHigherInList input list =
@@ -279,12 +281,12 @@ updatePageSize minimumNewPageSize (State {sortColumns, rowCursor, pagination, ta
                 NoPagination ->
                     0
     in
-    State {sortColumns = sortColumns, pageSize = newPageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId}
+    State { sortColumns = sortColumns, pageSize = newPageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId }
 
 
 updateRowCursor : Int -> State -> State
-updateRowCursor newRowCursor (State {sortColumns, pageSize,pagination, tableId}) =
-    State {sortColumns = sortColumns, pageSize = pageSize, rowCursor = newRowCursor, pagination = pagination, tableId = tableId}
+updateRowCursor newRowCursor (State { sortColumns, pageSize, pagination, tableId }) =
+    State { sortColumns = sortColumns, pageSize = pageSize, rowCursor = newRowCursor, pagination = pagination, tableId = tableId }
 
 
 
@@ -386,7 +388,7 @@ you have. Stories make it possible to design better!
 
 -}
 type alias Customizations data msg =
-    { beforeAndAfterTable : { before: Maybe (Html msg), after : Maybe (Html msg) }
+    { beforeAndAfterTable : { before : Maybe (Html msg), after : Maybe (Html msg) }
     , tableAttrs : Array (Attribute msg)
     , caption : Maybe (HtmlDetails msg)
     , colgroup : Array (HeaderInfo msg) -> Maybe (HtmlDetails msg)
@@ -470,11 +472,11 @@ defaultTableHeader headerInfos =
 
                 thClasses =
                     [ A.classList
-                        [ {class = "dt-orderable-asc", enabled = canBeSorted Asc }
-                        , {class = "dt-orderable-desc", enabled = canBeSorted Desc }
-                        , {class = "dt-ordering-asc", enabled = isSorted Asc }
-                        , {class = "dt-ordering-desc", enabled = isSorted Desc }
-                        , {class = "dt-ordering-none", enabled = not (isSorted Asc) && not (isSorted Desc) }
+                        [ { class = "dt-orderable-asc", enabled = canBeSorted Asc }
+                        , { class = "dt-orderable-desc", enabled = canBeSorted Desc }
+                        , { class = "dt-ordering-asc", enabled = isSorted Asc }
+                        , { class = "dt-ordering-desc", enabled = isSorted Desc }
+                        , { class = "dt-ordering-none", enabled = not (isSorted Asc) && not (isSorted Desc) }
                         ]
                     ]
 
@@ -483,7 +485,7 @@ defaultTableHeader headerInfos =
             in
             Html.th thAttributes [ Html.div [ A.class "dt-column-header" ] [ columnTitle, columnOrder ] ]
     in
-    { attributes =[], children =[ Html.tr [] <| Array.map defaultTH headerInfos ] }
+    { attributes = [], children = [ Html.tr [] <| Array.map defaultTH headerInfos ] }
 
 
 simpleRowAttrs : (State -> msg) -> State -> data -> Array (Attribute msg)
@@ -519,11 +521,13 @@ type alias ColumnData data msg =
     , sorter : Sorter data
     }
 
+
 columnData name viewData sorter =
     { name = name
     , viewData = viewData
     , sorter = sorter
     }
+
 
 type alias ColumnHeader data =
     { name : String
@@ -674,8 +678,8 @@ that.
 
 -}
 view : Config data msg -> State -> Array data -> Html msg
-view conf (State {sortColumns, rowCursor, tableId}) data =
-    paginatedView conf (State {sortColumns = sortColumns, pageSize = 0, rowCursor = rowCursor, pagination = NoPagination, tableId = tableId}) data
+view conf (State { sortColumns, rowCursor, tableId }) data =
+    paginatedView conf (State { sortColumns = sortColumns, pageSize = 0, rowCursor = rowCursor, pagination = NoPagination, tableId = tableId }) data
 
 
 paginatedView : Config data msg -> State -> Array data -> Html msg
@@ -706,20 +710,24 @@ paginatedView ((Config { toId, toMsg, columns, customizations }) as conf) state 
                     [ Html.tfoot attributes children, tbody ]
     in
     Html.table customizations.tableAttrs <|
-        when customizations.caption is
+        (when customizations.caption is
             Nothing ->
                 [ thead ] ++ withFoot
 
             Just { attributes, children } ->
-                [Html.caption attributes children] ++ [thead] ++ withFoot
+                [ Html.caption attributes children ] ++ [ thead ] ++ withFoot
+        )
 
 
 type alias HeaderInfo msg =
     { name : String
-    , selected : Maybe { sortRank : Int, sortDirection : SortDirection } -- Nothing if not selected, otherwise Just {sortRank, sortDirection}
-    , sortDirections : Array SortDirection -- Empty if Unsortable
-    , clickActions : Array (Attribute msg)
+    , selected : Maybe { sortRank : Int, sortDirection : SortDirection }
+    , -- Nothing if not selected, otherwise Just {sortRank, sortDirection}
+      sortDirections : Array SortDirection
+    , -- Empty if Unsortable
+      clickActions : Array (Attribute msg)
     }
+
 
 headerInfo name selected sortDirections clickActions =
     { name = name
@@ -728,8 +736,9 @@ headerInfo name selected sortDirections clickActions =
     , clickActions = clickActions
     }
 
+
 toHeaderInfo : State -> (State -> msg) -> ColumnHeader data -> HeaderInfo msg
-toHeaderInfo ((State {sortColumns}) as state) toMsg { name, sorter } =
+toHeaderInfo ((State { sortColumns }) as state) toMsg { name, sorter } =
     let
         reverse a =
             when a is
@@ -746,18 +755,19 @@ toHeaderInfo ((State {sortColumns}) as state) toMsg { name, sorter } =
 
                 nonEmptyList ->
                     let
-                        indexedList : Array ( { left : Int, right : { sortColumnName : String, sortDirection : SortDirection }})
+                        indexedList : Array { left : Int, right : { sortColumnName : String, sortDirection : SortDirection } }
                         indexedList =
-                            Array.indexedMap (\idx val -> { left = idx, right = val}) <| Array.reverse nonEmptyList
+                            Array.indexedMap (\idx val -> { left = idx, right = val }) <| Array.reverse nonEmptyList
 
                         filteredList =
-                            Array.keepIf (\{ right = { sortColumnName } } -> name == sortColumnName ) indexedList
+                            Array.keepIf (\{ right = { sortColumnName } } -> name == sortColumnName) indexedList
                     in
                     when Array.takeFirst 1 filteredList is
-                        [{ left = index, right = { sortDirection }} ] ->
+                        [ { left = index, right = { sortDirection } } ] ->
                             Just { sortDirection = sortDirection, sortRank = index }
 
-                        _ -> Nothing
+                        _ ->
+                            Nothing
 
         reversedSortDirection =
             when selected is
@@ -813,7 +823,7 @@ viewRow toId toMsg columns toRowAttrs state data =
 viewRowHelp : Array (ColumnData data msg) -> ((State -> msg) -> State -> data -> Array (Attribute msg)) -> (State -> msg) -> State -> data -> Html msg
 viewRowHelp columns toRowAttrs toMsg state data =
     Html.tr (toRowAttrs toMsg state data) <|
-        Array.map (viewCell data ) columns
+        Array.map (viewCell data) columns
 
 
 viewCell : data -> ColumnData data msg -> Html msg
@@ -830,15 +840,15 @@ viewCell data { viewData, sorter } =
 
 
 sort : State -> Array (ColumnData data msg) -> Array data -> Array data
-sort (State {sortColumns, pageSize, rowCursor, pagination, tableId}) cData data =
+sort (State { sortColumns, pageSize, rowCursor, pagination, tableId }) cData data =
     when Array.popFirst sortColumns is
-        Just { first = { sortColumnName,sortDirection}, rest = rest } ->
+        Just { first = { sortColumnName, sortDirection }, rest = rest } ->
             when findSorter sortColumnName cData is
                 Nothing ->
                     data
 
                 Just sorter ->
-                    sort (State {sortColumns = rest, pageSize = pageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId}) cData <| applySorter sortDirection sorter data
+                    sort (State { sortColumns = rest, pageSize = pageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId }) cData <| applySorter sortDirection sorter data
 
         Nothing ->
             data
@@ -880,7 +890,7 @@ findSorter selectedColumn cData =
         Nothing ->
             Nothing
 
-        Just {first = { name, sorter }, rest} ->
+        Just { first = { name, sorter }, rest } ->
             if name == selectedColumn then
                 Just sorter
 
@@ -993,16 +1003,16 @@ simplePagination =
 
 paginationWith : Int -> Array Int -> PaginationStyle
 paginationWith defaultPageSize otherPageSizes =
-    Pager <| [defaultPageSize] ++ otherPageSizes
+    Pager <| [ defaultPageSize ] ++ otherPageSizes
 
 
 scrollingPaginationWith : Int -> Array Int -> PaginationStyle
 scrollingPaginationWith defaultPageSize otherPageSizes =
-    Scroller <| [defaultPageSize] ++ otherPageSizes
+    Scroller <| [ defaultPageSize ] ++ otherPageSizes
 
 
 getPaginatedData : State -> Array data -> Array data
-getPaginatedData (State {pageSize, rowCursor, pagination}) data =
+getPaginatedData (State { pageSize, rowCursor, pagination }) data =
     let
         precedingFullPages =
             (rowCursor - 1) // pageSize
@@ -1059,7 +1069,7 @@ getPaginatedData (State {pageSize, rowCursor, pagination}) data =
 
 
 pageLength : Config data msg -> State -> Html msg
-pageLength (Config { toMsg }) ((State {pagination}) as tableState) =
+pageLength (Config { toMsg }) ((State { pagination }) as tableState) =
     let
         onPageSizeChoice : State -> Html.Attribute msg
         onPageSizeChoice state =
@@ -1072,14 +1082,15 @@ pageLength (Config { toMsg }) ((State {pagination}) as tableState) =
             Array.foldr
                 (\val html ->
                     [ Html.option [ A.value val, A.selected <| (String.fromInt <| getPageSize tableState) == val ] [ Html.text val ]
-                    ]    ++ html
+                    ]
+                        ++ html
                 )
                 []
             <|
                 Array.map String.fromInt values
     in
     Html.select [ onPageSizeChoice tableState ] <|
-        when pagination is
+        (when pagination is
             Pager values ->
                 viewOption values
 
@@ -1088,6 +1099,7 @@ pageLength (Config { toMsg }) ((State {pagination}) as tableState) =
 
             _ ->
                 []
+        )
 
 
 isEven : Int -> Bool
