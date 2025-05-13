@@ -1018,7 +1018,7 @@ getPaginatedData (Config { toId }) (State { pageSize, activeRowId, pagination })
                                 Array.length data - pageSize
 
                             _ ->
-                                if isEven pageSize
+                                if isEven pageSize then
                                     rowCursor - pageSize // 2
 
                                 else
