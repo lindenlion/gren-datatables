@@ -1,18 +1,17 @@
 module DataTable exposing
     ( view
-    , config, stringColumn, intColumn, floatColumn, rowNumberColumn
-    , State, SortDirection(..), initialSort
-    , getSortState, updateSortState, updateMultiSortState, sortBy
-    , getSortedData
-    , paginatedView
-    , initialState, getPageSize, getRowCursor, updatePageSize, updateRowCursor
-    , getPaginatedData
+    , config, stringColumn, intColumn, floatColumn, column
+    , State, new
+    , SortDirection(..), initialSort
+    , getSortState, updateSortState, updateMultiSortState
+    , getPageSize, getRowCursor, updatePageSize, updateRowCursor
+    , setNoPagination, setSimplePagination, setPaginationWith, setScrollingPaginationWith
+    , pageLength
     , Column, customColumn, veryCustomColumn
-    , Sorter, unsortable, increasingBy, decreasingBy
-    , increasingOrDecreasingBy, decreasingOrIncreasingBy
+    , Sorter, unsortable, increasingBy, decreasingBy, increasingOrDecreasingBy, decreasingOrIncreasingBy
     , Config, customConfig, Customizations, HtmlDetails
     , defaultCustomizations
-    , PaginationStyle, column, getDefaultPageSize, noPagination, pageLength, paginationWith, scrollingPaginationWith, simplePagination
+    , getSortedData, getPaginatedData
     )
 
 {-| This library helps you create sortable tables. The crucial feature is that it
@@ -33,26 +32,25 @@ I recommend checking out the [examples] to get a feel for how it works.
 
 # Configuration
 
-@docs config, stringColumn, intColumn, floatColumn, rowNumberColumn
+@docs config, stringColumn, intColumn, floatColumn, column
 
 
 # State
 
-@docs State, SortDirection, initialSort
-@docs getSortState, updateSortState, updateMultiSortState, sortBy
+@docs State, new
 
 
-# Sorted Data Access
+# Sorted Table
 
-@docs getSortedData
+@docs SortDirection, initialSort
+@docs getSortState, updateSortState, updateMultiSortState
 
 
 # Paginated Sorted Table
 
-@docs paginatedView
-@docs initialState, getPageSize, getRowCursor, updatePageSize, updateRowCursor
-@docs getPaginatedData
-
+@docs getPageSize, getRowCursor, updatePageSize, updateRowCursor
+@docs setNoPagination, setSimplePagination, setPaginationWith, setScrollingPaginationWith
+@docs pageLength
 
 # Crazy Customization
 
@@ -65,14 +63,17 @@ is not that crazy.
 ## Custom Columns
 
 @docs Column, customColumn, veryCustomColumn
-@docs Sorter, unsortable, increasingBy, decreasingBy
-@docs increasingOrDecreasingBy, decreasingOrIncreasingBy
+@docs Sorter, unsortable, increasingBy, decreasingBy, increasingOrDecreasingBy, decreasingOrIncreasingBy
 
 
 ## Custom Tables
 
-@docs Config, customConfig, Customizations, HtmlDetails, Status, PaginationStatus
+@docs Config, customConfig, Customizations, HtmlDetails
 @docs defaultCustomizations
+
+## Intermediate Data Access
+
+@docs getSortedData, getPaginatedData
 
 -}
 
@@ -144,42 +145,17 @@ initialSort header =
         }
 
 
-{-| Create a table state for a paginated table. The name of the column to be
-sorted by default, followed by the desired page size and the total row count
-for the table. So if you want your table of countries sorted by population in
-descending order with 10 countries per page by default, you might say:
+{-| Create a default table state. Only the id of the table is supplied. All other state is initialised with default values. This state can then be set with update functions. So if you wanted a table of countries that is by default sorted by population count in descending order you might write
 
-import Table exposing (Asc, Desc)
+import Table
 
-    Table.initialState "Population" Desc 10
+    Table.new "Countries"
+        |> DataTable.updateSortState "Population" DataTable.Desc
 
 -}
-initialState : String -> PaginationStyle -> State
-initialState id paginationStyle =
-    let
-        f =
-            Maybe.withDefault 0 << Maybe.map .first << Array.popFirst
-
-        initialPageSize =
-            when paginationStyle is
-                NoPagination ->
-                    0
-
-                Pager pageSizes ->
-                    f pageSizes
-
-                Scroller pageSizes ->
-                    f pageSizes
-    in
-    when paginationStyle is
-        NoPagination ->
-            State { sortColumns = [], pageSize = 0, rowCursor = 0, pagination = NoPagination, tableId = id }
-
-        Pager pageSizes ->
-            State { sortColumns = [], pageSize = initialPageSize, rowCursor = 0, pagination = Pager pageSizes, tableId = id }
-
-        Scroller pageSizes ->
-            State { sortColumns = [], pageSize = initialPageSize, rowCursor = 0, pagination = Scroller pageSizes, tableId = id }
+new : String -> State
+new id =
+    State { sortColumns = [], pageSize = 0, rowCursor = 0, pagination = NoPagination, tableId = id }
 
 
 {-| Inspect the current table state. Which column is being sorted by, and
@@ -200,23 +176,6 @@ getPageSize (State { pageSize }) =
     pageSize
 
 
-getDefaultPageSize : State -> Int
-getDefaultPageSize (State { pagination }) =
-    let
-        f =
-            Maybe.withDefault 0 << Maybe.map .first << Array.popFirst
-    in
-    when pagination is
-        NoPagination ->
-            0
-
-        Pager pageSizes ->
-            f pageSizes
-
-        Scroller pageSizes ->
-            f pageSizes
-
-
 {-| Inspect the current table state. What is the current position of the row
 cursor. Together with the current page size this determines which table page
 is shown.
@@ -224,21 +183,6 @@ is shown.
 getRowCursor : State -> Int
 getRowCursor (State { rowCursor }) =
     rowCursor
-
-
-{-| Create a table state with a column to sort by, and whether to
-reverse the order. This allows a sort to be applied to URL params or
-somewhere else outside of Elm.
-**Deprecated function**: does not support pagination. Use updateSortState instead.
-This function will be removed in the next version of this package.
--}
-sortBy : String -> Bool -> State
-sortBy headerName isReversed =
-    if isReversed then
-        State { sortColumns = [ { sortColumnName = headerName, sortDirection = Desc } ], pageSize = 0, rowCursor = 0, pagination = NoPagination, tableId = "sortableTable" }
-
-    else
-        State { sortColumns = [ { sortColumnName = headerName, sortDirection = Asc } ], pageSize = 0, rowCursor = 0, pagination = NoPagination, tableId = "sortableTable" }
 
 
 {-| -}
@@ -258,6 +202,7 @@ updateMultiSortState newSortColumn sortDirection (State { sortColumns, pageSize,
     State { sortColumns = newSortState, pageSize = pageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId }
 
 
+{-| -}
 updatePageSize : Int -> State -> State
 updatePageSize minimumNewPageSize (State { sortColumns, rowCursor, pagination, tableId }) =
     let
@@ -284,6 +229,7 @@ updatePageSize minimumNewPageSize (State { sortColumns, rowCursor, pagination, t
     State { sortColumns = sortColumns, pageSize = newPageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId }
 
 
+{-| -}
 updateRowCursor : Int -> State -> State
 updateRowCursor newRowCursor (State { sortColumns, pageSize, pagination, tableId }) =
     State { sortColumns = sortColumns, pageSize = pageSize, rowCursor = newRowCursor, pagination = pagination, tableId = tableId }
@@ -571,15 +517,6 @@ floatColumn name toFloat =
 
 
 {-| -}
-rowNumberColumn : String -> Column data msg
-rowNumberColumn name =
-    customColumn
-        { name = name
-        , viewData = \_ -> "rowNumber"
-        , sorter = RowNumber
-        }
-
-
 column : ((data -> comparable) -> Sorter data) -> String -> (data -> String) -> (data -> comparable) -> Column data msg
 column sorter name toString toComparable =
     customColumn { name = name, viewData = toString, sorter = sorter toComparable }
@@ -678,12 +615,7 @@ that.
 
 -}
 view : Config data msg -> State -> Array data -> Html msg
-view conf (State { sortColumns, rowCursor, tableId }) data =
-    paginatedView conf (State { sortColumns = sortColumns, pageSize = 0, rowCursor = rowCursor, pagination = NoPagination, tableId = tableId }) data
-
-
-paginatedView : Config data msg -> State -> Array data -> Html msg
-paginatedView ((Config { toId, toMsg, columns, customizations }) as conf) state data =
+view ((Config { toId, toMsg, columns, customizations }) as conf) state data =
     let
         rows =
             getPaginatedData state <| getSortedData conf state data
@@ -991,26 +923,47 @@ type PaginationStyle
     | Scroller (Array Int)
 
 
-noPagination : PaginationStyle
-noPagination =
-    NoPagination
+{-| -}
+setNoPagination : State -> State
+setNoPagination state =
+    when state is
+        State currentState ->
+            State { currentState | pagination = NoPagination }
 
 
-simplePagination : PaginationStyle
-simplePagination =
-    Pager [ 10, 25, 50, 100 ]
+{-| -}
+setSimplePagination : State -> State
+setSimplePagination state =
+    when state is
+        State currentState ->
+            State { currentState | pagination = Pager [ 10, 25, 50, 100 ] }
 
 
-paginationWith : Int -> Array Int -> PaginationStyle
-paginationWith defaultPageSize otherPageSizes =
-    Pager <| [ defaultPageSize ] ++ otherPageSizes
+{-| -}
+setPaginationWith : Int -> Array Int -> State -> State
+setPaginationWith defaultPageSize otherPageSizes state =
+    when state is
+        State currentState ->
+            State
+                { currentState
+                    | pagination = Pager <| Array.sort <| [ defaultPageSize ] ++ otherPageSizes
+                    , pageSize = defaultPageSize
+                }
 
 
-scrollingPaginationWith : Int -> Array Int -> PaginationStyle
-scrollingPaginationWith defaultPageSize otherPageSizes =
-    Scroller <| [ defaultPageSize ] ++ otherPageSizes
+{-| -}
+setScrollingPaginationWith : Int -> Array Int -> State -> State
+setScrollingPaginationWith defaultPageSize otherPageSizes state =
+    when state is
+        State currentState ->
+            State
+                { currentState
+                    | pagination = Scroller <| Array.sort <| [ defaultPageSize ] ++ otherPageSizes
+                    , pageSize = defaultPageSize
+                }
 
 
+{-| -}
 getPaginatedData : State -> Array data -> Array data
 getPaginatedData (State { pageSize, rowCursor, pagination }) data =
     let
@@ -1064,12 +1017,13 @@ getPaginatedData (State { pageSize, rowCursor, pagination }) data =
                     0
     in
     data
-        |> Array.takeFirst lastRowOnPage
-        |> Array.dropFirst lastRowBeforePage
+        |> Array.takeFirst (negativeToZero lastRowOnPage)
+        |> Array.dropFirst (negativeToZero lastRowBeforePage)
 
 
-pageLength : Config data msg -> State -> Html msg
-pageLength (Config { toMsg }) ((State { pagination }) as tableState) =
+{-| -}
+pageLengthChooser : Config data msg -> State -> Html msg
+pageLengthChooser (Config { toMsg }) ((State { pagination }) as tableState) =
     let
         onPageSizeChoice : State -> Html.Attribute msg
         onPageSizeChoice state =
@@ -1105,3 +1059,13 @@ pageLength (Config { toMsg }) ((State { pagination }) as tableState) =
 isEven : Int -> Bool
 isEven int =
     Math.modBy 2 int == 0
+
+
+negativeToZero : Int -> Int
+negativeToZero n =
+    when compare n 0 is
+        LT ->
+            0
+
+        _ ->
+            n
