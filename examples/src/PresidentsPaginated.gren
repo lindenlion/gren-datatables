@@ -34,9 +34,10 @@ init people =
         model =
             { people = people
             , tableState =
-                Table.initialState "Presidents" Table.simplePagination
-                    |> Table.updateSortState "State" Desc
+                Table.new "Presidents"
+                    |> Table.setScrollingPaginationWith 10 [ 0, 5, 25, 50 ]
                     |> Table.updateMultiSortState "Year" Asc
+                    |> Table.updateActiveRowId ""
             , query = ""
             }
     in
@@ -89,8 +90,8 @@ view { people, tableState, query } =
             ]
         , div [] []
         , input [ placeholder "Search by Name", onInput SetQuery ] []
-        , Table.pageLength config tableState
-        , Table.paginatedView config tableState acceptablePeople
+        , Table.pageLengthChooser config tableState
+        , Table.view config tableState acceptablePeople
         ]
 
 
