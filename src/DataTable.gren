@@ -4,9 +4,9 @@ module DataTable exposing
     , State, new
     , SortDirection(..), initialSort
     , getSortState, updateSortState, updateMultiSortState
-    , getPageSize, getRowCursor, updatePageSize, updateRowCursor
+    , getPageSize, getActiveRowId, updatePageSize, updateActiveRowId
     , setNoPagination, setSimplePagination, setPaginationWith, setScrollingPaginationWith
-    , pageLength
+    , pageLengthChooser
     , Column, customColumn, veryCustomColumn
     , Sorter, unsortable, increasingBy, decreasingBy, increasingOrDecreasingBy, decreasingOrIncreasingBy
     , Config, customConfig, Customizations, HtmlDetails
@@ -48,9 +48,9 @@ I recommend checking out the [examples] to get a feel for how it works.
 
 # Paginated Sorted Table
 
-@docs getPageSize, getRowCursor, updatePageSize, updateRowCursor
+@docs getPageSize, getActiveRowId, updatePageSize, updateActiveRowId
 @docs setNoPagination, setSimplePagination, setPaginationWith, setScrollingPaginationWith
-@docs pageLength
+@docs pageLengthChooser
 
 # Crazy Customization
 
@@ -99,7 +99,7 @@ type State
     = State
         { sortColumns : Array { sortColumnName : String, sortDirection : SortDirection }
         , pageSize : Int
-        , rowCursor : Int
+        , activeRowId : String
         , pagination : PaginationStyle
         , tableId : String
         }
@@ -139,7 +139,7 @@ initialSort header =
     State
         { sortColumns = [ { sortColumnName = header, sortDirection = Asc } ]
         , pageSize = 0
-        , rowCursor = 0
+        , activeRowId = ""
         , pagination = NoPagination
         , tableId = "sortableTable"
         }
@@ -155,7 +155,7 @@ import Table
 -}
 new : String -> State
 new id =
-    State { sortColumns = [], pageSize = 0, rowCursor = 0, pagination = NoPagination, tableId = id }
+    State { sortColumns = [], pageSize = 0, activeRowId = "", pagination = NoPagination, tableId = id }
 
 
 {-| Inspect the current table state. Which column is being sorted by, and
@@ -180,31 +180,31 @@ getPageSize (State { pageSize }) =
 cursor. Together with the current page size this determines which table page
 is shown.
 -}
-getRowCursor : State -> Int
-getRowCursor (State { rowCursor }) =
-    rowCursor
+getActiveRowId : State -> String
+getActiveRowId (State { activeRowId }) =
+    activeRowId
 
 
 {-| -}
 updateSortState : String -> SortDirection -> State -> State
-updateSortState newSortColumn sortDirection (State { pageSize, rowCursor, pagination, tableId }) =
-    State { sortColumns = [ { sortColumnName = newSortColumn, sortDirection = sortDirection } ], pageSize = pageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId }
+updateSortState newSortColumn sortDirection (State { pageSize, activeRowId, pagination, tableId }) =
+    State { sortColumns = [ { sortColumnName = newSortColumn, sortDirection = sortDirection } ], pageSize = pageSize, activeRowId = activeRowId, pagination = pagination, tableId = tableId }
 
 
 {-| -}
 updateMultiSortState : String -> SortDirection -> State -> State
-updateMultiSortState newSortColumn sortDirection (State { sortColumns, pageSize, rowCursor, pagination, tableId }) =
+updateMultiSortState newSortColumn sortDirection (State { sortColumns, pageSize, activeRowId, pagination, tableId }) =
     let
         newSortState =
             [ { sortColumnName = newSortColumn, sortDirection = sortDirection } ]
                 ++ Array.keepIf (\{ sortColumnName } -> sortColumnName /= newSortColumn) sortColumns
     in
-    State { sortColumns = newSortState, pageSize = pageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId }
+    State { sortColumns = newSortState, pageSize = pageSize, activeRowId = activeRowId, pagination = pagination, tableId = tableId }
 
 
 {-| -}
 updatePageSize : Int -> State -> State
-updatePageSize minimumNewPageSize (State { sortColumns, rowCursor, pagination, tableId }) =
+updatePageSize minimumNewPageSize (State { sortColumns, activeRowId, pagination, tableId }) =
     let
         nextHigherInList : Int -> Array Int -> Int
         nextHigherInList input list =
@@ -226,13 +226,13 @@ updatePageSize minimumNewPageSize (State { sortColumns, rowCursor, pagination, t
                 NoPagination ->
                     0
     in
-    State { sortColumns = sortColumns, pageSize = newPageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId }
+    State { sortColumns = sortColumns, pageSize = newPageSize, activeRowId = activeRowId, pagination = pagination, tableId = tableId }
 
 
 {-| -}
-updateRowCursor : Int -> State -> State
-updateRowCursor newRowCursor (State { sortColumns, pageSize, pagination, tableId }) =
-    State { sortColumns = sortColumns, pageSize = pageSize, rowCursor = newRowCursor, pagination = pagination, tableId = tableId }
+updateActiveRowId : String -> State -> State
+updateActiveRowId newActiveRowId (State { sortColumns, pageSize, pagination, tableId }) =
+    State { sortColumns = sortColumns, pageSize = pageSize, activeRowId = newActiveRowId, pagination = pagination, tableId = tableId }
 
 
 
@@ -340,7 +340,7 @@ type alias Customizations data msg =
     , colgroup : Array (HeaderInfo msg) -> Maybe (HtmlDetails msg)
     , thead : Array (HeaderInfo msg) -> HtmlDetails msg
     , tbodyAttrs : Array (Attribute msg)
-    , rowAttrs : (State -> msg) -> State -> data -> Array (Attribute msg)
+    , rowAttrs : (data -> String) -> (State -> msg) -> State -> data -> Array (Attribute msg)
     , tfoot : Maybe (HtmlDetails msg)
     }
 
@@ -434,12 +434,12 @@ defaultTableHeader headerInfos =
     { attributes = [], children = [ Html.tr [] <| Array.map defaultTH headerInfos ] }
 
 
-simpleRowAttrs : (State -> msg) -> State -> data -> Array (Attribute msg)
-simpleRowAttrs toMsg state _ =
+simpleRowAttrs : (data -> String) -> (State -> msg) -> State -> data -> Array (Attribute msg)
+simpleRowAttrs toId toMsg state data =
     let
         is_current_row =
-            if 0 == getRowCursor state then
-                False
+            if toId data == getActiveRowId state then
+                True
 
             else
                 False
@@ -448,7 +448,7 @@ simpleRowAttrs toMsg state _ =
         [ A.style "background" "#CEFAF8" ]
 
     else
-        [ E.onClick <| toMsg <| updateRowCursor 0 state ]
+        [ E.onClick <| toMsg <| updateActiveRowId (toId data) state ]
 
 
 
@@ -618,7 +618,7 @@ view : Config data msg -> State -> Array data -> Html msg
 view ((Config { toId, toMsg, columns, customizations }) as conf) state data =
     let
         rows =
-            getPaginatedData state <| getSortedData conf state data
+            getPaginatedData conf state <| getSortedData conf state data
 
         headers =
             Array.map toHeader columns
@@ -745,16 +745,16 @@ onColumnHeader state name sortDirection toMsg =
     ]
 
 
-viewRow : (data -> String) -> (State -> msg) -> Array (ColumnData data msg) -> ((State -> msg) -> State -> data -> Array (Attribute msg)) -> State -> data -> { key : String, node : Html msg }
+viewRow : (data -> String) -> (State -> msg) -> Array (ColumnData data msg) -> ((data -> String) -> (State -> msg) -> State -> data -> Array (Attribute msg)) -> State -> data -> { key : String, node : Html msg }
 viewRow toId toMsg columns toRowAttrs state data =
     { key = toId data
-    , node = viewRowHelp columns toRowAttrs toMsg state data
+    , node = viewRowHelp columns toRowAttrs toId toMsg state data
     }
 
 
-viewRowHelp : Array (ColumnData data msg) -> ((State -> msg) -> State -> data -> Array (Attribute msg)) -> (State -> msg) -> State -> data -> Html msg
-viewRowHelp columns toRowAttrs toMsg state data =
-    Html.tr (toRowAttrs toMsg state data) <|
+viewRowHelp : Array (ColumnData data msg) -> ((data -> String) -> (State -> msg) -> State -> data -> Array (Attribute msg)) -> (data -> String) -> (State -> msg) -> State -> data -> Html msg
+viewRowHelp columns toRowAttrs toId toMsg state data =
+    Html.tr (toRowAttrs toId toMsg state data) <|
         Array.map (viewCell data) columns
 
 
@@ -772,7 +772,7 @@ viewCell data { viewData, sorter } =
 
 
 sort : State -> Array (ColumnData data msg) -> Array data -> Array data
-sort (State { sortColumns, pageSize, rowCursor, pagination, tableId }) cData data =
+sort (State { sortColumns, pageSize, activeRowId, pagination, tableId }) cData data =
     when Array.popFirst sortColumns is
         Just { first = { sortColumnName, sortDirection }, rest = rest } ->
             when findSorter sortColumnName cData is
@@ -780,7 +780,7 @@ sort (State { sortColumns, pageSize, rowCursor, pagination, tableId }) cData dat
                     data
 
                 Just sorter ->
-                    sort (State { sortColumns = rest, pageSize = pageSize, rowCursor = rowCursor, pagination = pagination, tableId = tableId }) cData <| applySorter sortDirection sorter data
+                    sort (State { sortColumns = rest, pageSize = pageSize, activeRowId = activeRowId, pagination = pagination, tableId = tableId }) cData <| applySorter sortDirection sorter data
 
         Nothing ->
             data
@@ -964,9 +964,16 @@ setScrollingPaginationWith defaultPageSize otherPageSizes state =
 
 
 {-| -}
-getPaginatedData : State -> Array data -> Array data
-getPaginatedData (State { pageSize, rowCursor, pagination }) data =
+getPaginatedData : Config data msg -> State -> Array data -> Array data
+getPaginatedData (Config { toId }) (State { pageSize, activeRowId, pagination }) data =
     let
+        rowCursor =
+            data
+                |> Array.findFirst (\v -> toId v == activeRowId)
+                |> Maybe.map .index
+                |> Maybe.map (\i -> i + 1)
+                |> Maybe.withDefault 0
+
         precedingFullPages =
             (rowCursor - 1) // pageSize
 
@@ -1002,16 +1009,20 @@ getPaginatedData (State { pageSize, rowCursor, pagination }) data =
                     precedingFullPages * pageSize
 
                 Scroller _ ->
-                    when compare rowCursor <| Array.length data - pageSize // 2 is
-                        GT ->
-                            Array.length data - pageSize
+                    if pageSize == 0 then
+                        rowCursor - 2
 
-                        _ ->
-                            if isEven pageSize && pageSize /= 0 then
-                                rowCursor - pageSize // 2
+                    else
+                        when compare rowCursor <| Array.length data - pageSize // 2 is
+                            GT ->
+                                Array.length data - pageSize
 
-                            else
-                                rowCursor - pageSize // 2 - 1
+                            _ ->
+                                if isEven pageSize
+                                    rowCursor - pageSize // 2
+
+                                else
+                                    rowCursor - pageSize // 2 - 1
 
                 NoPagination ->
                     0

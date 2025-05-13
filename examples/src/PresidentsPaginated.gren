@@ -37,7 +37,7 @@ init people =
                 Table.new "Presidents"
                     |> Table.setScrollingPaginationWith 10 [ 0, 5, 25, 50 ]
                     |> Table.updateMultiSortState "Year" Asc
-                    |> Table.updateRowCursor 5
+                    |> Table.updateActiveRowId ""
             , query = ""
             }
     in
@@ -90,7 +90,7 @@ view { people, tableState, query } =
             ]
         , div [] []
         , input [ placeholder "Search by Name", onInput SetQuery ] []
-        , Table.pageLength config tableState
+        , Table.pageLengthChooser config tableState
         , Table.view config tableState acceptablePeople
         ]
 
