@@ -36,7 +36,7 @@ init people =
             , tableState =
                 Table.new "Presidents"
                     |> Table.setScrollingPaginationWith 10 [ 0, 5, 25, 50 ]
-                    |> Table.updateMultiSortState "Year" Asc
+                    |> Table.updateSortState "Year" Asc
                     |> Table.updateActiveRowId ""
             , query = ""
             }
