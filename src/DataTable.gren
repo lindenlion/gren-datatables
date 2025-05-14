@@ -14,64 +14,61 @@ module DataTable exposing
     , getSortedData, getPaginatedData
     )
 
-{-| This library helps you create sortable tables. The crucial feature is that it
-lets you own your data separately and keep it in whatever format is best for
-you. This way you are free to change your data without worrying about the table
-&ldquo;getting out of sync&rdquo; with the data. Having a single source of
-truth is pretty great!
+{-| This library helps you create sortable tables with pagination and filter options.
+The crucial feature is that it lets you own your data separately and keep it in
+whatever format is best for you. This way you are free to change your data without
+worrying about the table &ldquo;getting out of sync&rdquo; with the data. Having a single
+source of truth is pretty great!
 
 I recommend checking out the [examples] to get a feel for how it works.
 
-[examples]: https://github.com/billstclair/elm-sortable-table/tree/master/examples
+[examples]: https://github.com/lindenlion/gren-datatables/tree/mama/examples
 
 
-# View
+## View
 
 @docs view
 
 
-# Configuration
+## Configuration
 
 @docs config, stringColumn, intColumn, floatColumn, column
 
 
-# State
+## State
 
 @docs State, new
 
 
-# Sorted Table
+## Sort order
 
 @docs SortDirection, initialSort
 @docs getSortState, updateSortState, updateMultiSortState
 
 
-# Paginated Sorted Table
+## Pagination
 
 @docs getPageSize, getActiveRowId, updatePageSize, updateActiveRowId
 @docs setNoPagination, setSimplePagination, setPaginationWith, setScrollingPaginationWith
 @docs pageLengthChooser
 
-# Crazy Customization
+## Crazy Customization
 
 If you are new to this library, you can probably stop reading here. After this
-point are a bunch of ways to customize your table further. If it does not
-provide what you need, you may just want to write a custom table yourself. It
-is not that crazy.
+point there are a bunch of ways to customize your table further.
 
-
-## Custom Columns
+### Custom Columns
 
 @docs Column, customColumn, veryCustomColumn
 @docs Sorter, unsortable, increasingBy, decreasingBy, increasingOrDecreasingBy, decreasingOrIncreasingBy
 
 
-## Custom Tables
+### Custom Config
 
 @docs Config, customConfig, Customizations, HtmlDetails
 @docs defaultCustomizations
 
-## Intermediate Data Access
+### Intermediate Data Access
 
 @docs getSortedData, getPaginatedData
 
@@ -257,35 +254,36 @@ type Config data msg
 {-| Create the `Config` for your `view` function. Everything you need to
 render your columns efficiently and handle selection of columns.
 
-Say we have a `Array Person` that we want to show as a table. The table should
-have a column for name and age. We would create a `Config` like this:
+Say we have an `Array Person`, where Person is a type alias for
+`{ name : String, age : Int, other: Float }` that we want to show as a table.
+You want to show a column for name and age, ignoring the other value. You would
+then create a `Config` like this:
 
-    import Table
+    import DataTable
 
-    type Msg = NewTableState State | ...
+    type Msg = NewTableState DataTable.State | ...
 
-    config : Table.Config Person Msg
+    config : DataTable.Config Person Msg
     config =
-      Table.config
+      DataTable.config
         { toId = .name
         , toMsg = NewTableState
         , columns =
-            [ Table.stringColumn "Name" .name
-            , Table.intColumn "Age" .age
+            [ DataTable.stringColumn "Name" .name
+            , DataTable.intColumn "Age" .age
             ]
         }
 
 You provide the following information in your table configuration:
 
-  - `toId` &mdash; turn a `Person` into a unique ID. This lets us use
+  - `toId` &mdash; turns a `Person` into a unique ID of type String.
+    This lets us use
     [`Html.Keyed`][keyed] under the hood to make re-sorts faster.
+  - `toMsg` &mdash; the message through which the DataTable can send
+    updated internal table states to your app's model.
   - `columns` &mdash; specify some columns to show.
-  - `toMsg` &mdash; a way to send new table states to your app as messages.
 
-See the [examples] to get a better feel for this!
-
-[keyed]: http://package.elm-lang.org/packages/elm-lang/html/latest/Html-Keyed
-[examples]: https://github.com/billstclair/elm-sortable-table/tree/master/examples
+[keyed]: https://packages.gren-lang.org/package/gren-lang/browser/version/latest/module/Html.Keyed
 
 -}
 config :
@@ -516,15 +514,57 @@ floatColumn name toFloat =
         }
 
 
-{-| -}
-column : ((data -> comparable) -> Sorter data) -> String -> (data -> String) -> (data -> comparable) -> Column data msg
-column sorter name toString toComparable =
-    customColumn { name = name, viewData = toString, sorter = sorter toComparable }
+{-| You may not find the helper functions for `String`, `Int` and `Float` to be flexible
+    enough for your needs. You may define your own column configuration with this function,
+    by providing optionally distinct column header name and column id functions, optionally distinct display, filter and sort render functions
+    and an Array of `SortDirection`s.
+
+
+-}
+column :
+    { name : String
+    , toString : data -> String
+    , sortDirections : ZeroOneOrTwo SortDirection
+    }
+    -> Column data msg
+column { name, toString, sortDirections } =
+    customColumn
+        { name = name
+        , id = name
+        , viewData = toString
+        , filterData = toString
+        , sortData = toString
+        , sortDirections = sortDirections
+        }
 
 
 textDetails : String -> HtmlDetails msg
 textDetails str =
     { attributes = [], children = [ Html.text str ] }
+
+
+type ZeroOneOrTwo a
+    = Zero
+    | One a
+    | Two a
+
+getSorter : ZeroOneOrTwo SortDirection -> (data -> comparable) -> Sorter data
+getSorter sortDirections toComparable =
+    when sortDirections is
+        Two Asc ->
+            increasingOrDecreasingBy toComparable
+
+        Two Desc ->
+            decreasingOrIncreasingBy toComparable
+
+        One Asc ->
+            increasingBy toComparable
+
+        One Desc ->
+            decreasingBy toComparable
+
+        Zero ->
+            unsortable
 
 
 {-| Perhaps the basic columns are not quite what you want. Maybe you want to
@@ -554,13 +594,17 @@ More about sorters soon!
 -}
 customColumn :
     { name : String
+    , id : String
     , viewData : data -> String
-    , sorter : Sorter data
+    , filterData : data -> String
+    , sortData : data -> comparable
+    , sortDirections : ZeroOneOrTwo SortDirection
     }
     -> Column data msg
-customColumn { name, viewData, sorter } =
+customColumn { name, id, viewData, filterData, sortData, sortDirections } =
     Column <|
-        columnData name (textDetails << viewData) sorter
+        columnData name (textDetails << viewData) <|
+            getSorter sortDirections sortData
 
 
 {-| It is _possible_ that you want something crazier than `customColumn`. In
@@ -603,15 +647,16 @@ veryCustomColumn =
 -- VIEW
 
 
-{-| Take a list of data and turn it into a table. The `Config` argument is the
+{-| Take an array of data and turn it into a table. The `Config` argument is the
 configuration for the table. It describes the columns that we want to show. The
-`State` argument describes which column we are sorting by at the moment.
+`State` argument contains the current internal state of the table, including which
+column(s) the rows are sorted by at the moment, or which row is currently active.
+The `data` type will usually be a record, but any value is possible.
 
 **Note:** The `State` and `Array data` should live in your `Model`. The `Config`
-for the table belongs in your `view` code. I very strongly recommend against
-putting `Config` in your model. Describe any potential table configurations
-statically, and look for a different library if you need something crazier than
-that.
+for the table belongs (hard-coded) in your `view` code, as it is just a collection
+of customizable view and helper functions and it is strongly recommended not to
+put any functions in your model.
 
 -}
 view : Config data msg -> State -> Array data -> Html msg
