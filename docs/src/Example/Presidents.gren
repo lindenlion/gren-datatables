@@ -1,7 +1,7 @@
-module PresidentsPaginated exposing (Model, Msg(..), Person, config, init, main, presidents, update, view)
+module Example.Presidents exposing (Model, Msg(..), Person, config, init, main, presidents, update, view)
 
 import Browser
-import DataTable as Table exposing (SortDirection(..))
+import DataTable as Table
 import Html exposing (Html, div, h1, input, li, text, ul)
 import Html.Attributes exposing (placeholder)
 import Html.Events exposing (onInput)
@@ -9,11 +9,10 @@ import Html.Events exposing (onInput)
 
 main : Program {} Model Msg
 main =
-    Browser.element
-        { init = \{} -> init presidents
+    Browser.sandbox
+        { init = init presidents
         , update = update
         , view = view
-        , subscriptions = \_ -> Sub.none
         }
 
 
@@ -28,20 +27,16 @@ type alias Model =
     }
 
 
-init : Array Person -> { model : Model, command : Cmd Msg }
+init : Array Person -> Model
 init people =
     let
         model =
             { people = people
-            , tableState =
-                Table.new "Presidents"
-                    |> Table.setScrollingPaginationWith 10 [ 0, 5, 25, 50 ]
-                    |> Table.updateSortState "Year" Asc
-                    |> Table.updateActiveRowId ""
+            , tableState = Table.initialSort "State"
             , query = ""
             }
     in
-    { model = model, command = Cmd.none }
+    model
 
 
 
@@ -53,18 +48,14 @@ type Msg
     | SetTableState Table.State
 
 
-update : Msg -> Model -> { model : Model, command : Cmd Msg }
+update : Msg -> Model -> Model
 update msg model =
     when msg is
         SetQuery newQuery ->
-            { model = { model | query = newQuery }
-            , command = Cmd.none
-            }
+            { model | query = newQuery }
 
         SetTableState newState ->
-            { model = { model | tableState = newState }
-            , command = Cmd.none
-            }
+            { model | tableState = newState }
 
 
 
@@ -90,7 +81,6 @@ view { people, tableState, query } =
             ]
         , div [] []
         , input [ placeholder "Search by Name", onInput SetQuery ] []
-        , Table.pageLengthChooser config tableState
         , Table.view config tableState acceptablePeople
         ]
 
