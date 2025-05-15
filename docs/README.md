@@ -1,8 +1,10 @@
 # Examples
 
-This folder contains the source code of the `gren-datatables` official documenatation with [many live examples](https://lindenlion.github.io/gren-datatables).
+This folder contains the source code of the `gren-datatables` official documenatation with
+- [many live examples](https://lindenlion.github.io/gren-datatables).
 
-In addition to the live examples, a detailed description of the package API is hosted on the [gren package repository](https://packages.gren-lang.org/package/lindenlion/gren-datatables/version/latest/module/DataTable)
+In addition to the live examples, a detailed description of the package API is hosted on the
+- [gren package repository](https://packages.gren-lang.org/package/lindenlion/gren-datatables/version/latest/module/DataTable)
 
 
 # Development

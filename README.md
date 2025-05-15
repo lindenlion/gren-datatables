@@ -4,8 +4,7 @@ Create sortable, filterable, paginated tables in gren for data of any shape.
 
 ## Examples
 
-Work in progress... it is planned to link to a storybook style display of different
-configurations and features.
+[Many live examples here](https://lindenlion.github.io/gren-datatables).
 
 ## Roadmap
 
