@@ -379,6 +379,7 @@ defaultTableHeader headerInfos =
                         Just { sortRank } ->
                             if sortRank == 0 then
                                 []
+
                             else
                                 [ Html.sup [ A.style "opacity" "0.4" ] [ Html.text <| String.fromInt sortRank ] ]
 
@@ -750,8 +751,16 @@ toHeaderInfo ((State { sortColumns }) as state) toMsg { name, sorter } =
                             Array.keepIf (\{ right = { sortColumnName } } -> name == sortColumnName) indexedList
                     in
                     when Array.takeFirst 1 filteredList is
-                        [ { left = index , right = { sortDirection } } ] ->
-                            Just { sortDirection = sortDirection, sortRank = if Array.length indexedList == 1 then 0 else index + 1 }
+                        [ { left = index, right = { sortDirection } } ] ->
+                            Just
+                                { sortDirection = sortDirection
+                                , sortRank =
+                                    if Array.length indexedList == 1 then
+                                        0
+
+                                    else
+                                        index + 1
+                                }
 
                         _ ->
                             Nothing

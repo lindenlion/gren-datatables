@@ -8,6 +8,7 @@ table.dataTable tfoot > tr > th div.dt-column-footer {
 table.dataTable thead > tr > th div.dt-column-header span.dt-column-title,
 table.dataTable tfoot > tr > th div.dt-column-footer span.dt-column-title {
     flex-grow: 1;
+    text-align: start;
 }
 table.dataTable thead > tr > th.dt-orderable-asc,
 table.dataTable thead > tr > th.dt-orderable-desc {
@@ -20,28 +21,22 @@ table.dataTable thead > tr > th span.dt-column-order {
 }
 table.dataTable thead > tr > th span.dt-column-order:before,
 table.dataTable thead > tr > th span.dt-column-order:after {
-    left: 0;
     opacity: 0.125;
     line-height: 8px;
     font-size: 11px;
+    display: block;
+    position: absolute;
+    left: -5px;
 }
 table.dataTable thead > tr > th.dt-ordering-asc span.dt-column-order:before,
 table.dataTable thead > tr > th.dt-ordering-desc span.dt-column-order:after {
     opacity: 0.6;
 }
 table.dataTable thead > tr > th.dt-orderable-asc span.dt-column-order:before {
-    position: absolute;
-    display: block;
     bottom: 11px;
-    left: -5px;
-    content: "\25B2";
     content: "\25B2"/"";
 }
 table.dataTable thead > tr > th.dt-orderable-desc span.dt-column-order:after {
-    position: absolute;
-    display: block;
     top: 11px;
-    left: -5px;
-    content: "\25BC";
     content: "\25BC"/"";
 }
