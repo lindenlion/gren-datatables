@@ -3,16 +3,36 @@
 <html>
     <head>
         <meta charset="UTF-8" />
-        <link rel="stylesheet" type="text/css" href="assets/datatables.css" />
-        <title>Datatables for Gren</title>
-        <script type="text/javascript" src="generated/elm.js"></script>
+        <link rel="stylesheet" type="text/css" href="datatables.css" />
+        <title>DataTables for Gren</title>
+        <script type="text/javascript" src="app.js"></script>
+        <style type="text/css">
+            body {
+                font-family: monospace;
+            }
+            #navigation > button.active {
+                background: #e5e5e5;
+                -webkit-box-shadow: inset 0px 0px 5px #c1c1c1;
+                -moz-box-shadow: inset 0px 0px 5px #c1c1c1;
+                box-shadow: inset 0px 0px 5px #c1c1c1;
+                outline: none;
+            }
+
+            #navigation {
+                float: left;
+                min-width: 7em;
+                width: 10%;
+                height: 100vh;
+                margin-right: 5%;
+            }
+        </style>
     </head>
 
     <body>
-        <div id="presidents-paginated"></div>
+        <div id="app"></div>
         <script type="text/javascript">
-            Gren.PresidentsPaginated.init({
-                node: document.getElementById("presidents-paginated"),
+            Gren.DocBook.init({
+                node: document.getElementById("app"),
             });
         </script>
     </body>

@@ -1,0 +1,101 @@
+module DocBook exposing (Model, Msg(..), init, main, update, view)
+
+import Browser
+import Example.Presidents as Presidents
+import Example.PresidentsPaginated as Paginated
+import Html exposing (Html)
+import Html.Attributes exposing (class, id, style)
+import Html.Events exposing (onClick)
+
+
+main : Program {} Model Msg
+main =
+    Browser.sandbox
+        { init = init
+        , update = update
+        , view = view
+        }
+
+
+type Msg
+    = SwitchExample ExampleShown
+    | PresidentsMsg Presidents.Msg
+    | PaginatedMsg Paginated.Msg
+
+
+init =
+    { activeExample = ShowPresidents
+    , presidents = Presidents.init Presidents.presidents
+    , paginated = Paginated.init Paginated.presidents
+    }
+
+
+type alias Model =
+    { activeExample : ExampleShown
+    , presidents : Presidents.Model
+    , paginated : Paginated.Model
+    }
+
+
+view : Model -> Html Msg
+view model =
+    let
+        isActive variant =
+            if model.activeExample == variant then
+                class "active"
+
+            else
+                class ""
+
+        variants =
+            Array.map
+                (\variant -> Html.button [ onClick (SwitchExample variant), isActive variant ] [ Html.text <| exampleName variant ])
+                buttons
+    in
+    Html.div [ id "wrapper" ]
+        [ Html.div [ id "navigation" ] ([ Html.h2 [] [ Html.text "Examples" ] ] ++ variants)
+        , Html.div [ id "example" ]
+            [ when model.activeExample is
+                ShowPresidents ->
+                    Presidents.view model.presidents |> Html.map PresidentsMsg
+
+                ShowPaginated ->
+                    Paginated.view model.paginated |> Html.map PaginatedMsg
+            ]
+        ]
+
+
+update : Msg -> Model -> Model
+update msg model =
+    when msg is
+        SwitchExample exampleToSwitchTo ->
+            { model | activeExample = exampleToSwitchTo }
+
+        PresidentsMsg exampleMsg ->
+            { model | presidents = Presidents.update exampleMsg <| .presidents model }
+
+        PaginatedMsg exampleMsg ->
+            { model | paginated = Paginated.update exampleMsg <| .paginated model }
+
+
+type ExampleShown
+    = ShowPresidents
+    | ShowPaginated
+
+
+
+-- don't forget to add the example to this list, otherwise it won't show up...
+
+
+buttons =
+    [ ShowPresidents, ShowPaginated ]
+
+
+exampleName : ExampleShown -> String
+exampleName variant =
+    when variant is
+        ShowPresidents ->
+            "Sorting"
+
+        ShowPaginated ->
+            "Pagination"

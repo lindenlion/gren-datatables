@@ -1,0 +1,55 @@
+table.dataTable thead > tr > th div.dt-column-header,
+table.dataTable tfoot > tr > th div.dt-column-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1em;
+}
+table.dataTable thead > tr > th div.dt-column-header span.dt-column-title,
+table.dataTable tfoot > tr > th div.dt-column-footer span.dt-column-title {
+    flex-grow: 1;
+}
+table.dataTable thead > tr > th.dt-orderable-asc,
+table.dataTable thead > tr > th.dt-orderable-desc {
+    cursor: pointer;
+}
+table.dataTable thead > tr > th span.dt-column-order {
+    position: relative;
+    width: 12px;
+    height: 20px;
+}
+table.dataTable thead > tr > th span.dt-column-order:before,
+table.dataTable thead > tr > th span.dt-column-order:after {
+    left: 0;
+    opacity: 0.125;
+    line-height: 8px;
+    font-size: 11px;
+}
+table.dataTable thead > tr > th.dt-ordering-asc span.dt-column-order:before,
+table.dataTable thead > tr > th.dt-ordering-desc span.dt-column-order:after {
+    opacity: 0.6;
+}
+table.dataTable thead > tr > th.dt-orderable-asc span.dt-column-order:before {
+    position: absolute;
+    display: block;
+    bottom: 11px;
+    content: "\25B2";
+    content: "\25B2"/"";
+}
+table.dataTable thead > tr > th.dt-orderable-desc span.dt-column-order:after {
+    position: absolute;
+    display: block;
+    top: 11px;
+    content: "\25BC";
+    content: "\25BC"/"";
+}
+
+#navigation > button {
+    background: #ededed;
+    border: 1px solid #ccc;
+    padding: 5px 3px;
+    border-radius: 3px;
+    margin: 3px 0;
+    cursor: pointer;
+    width: 100%;
+}

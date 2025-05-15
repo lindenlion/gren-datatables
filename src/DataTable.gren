@@ -548,6 +548,7 @@ type ZeroOneOrTwo a
     | One a
     | Two a
 
+
 getSorter : ZeroOneOrTwo SortDirection -> (data -> comparable) -> Sorter data
 getSorter sortDirections toComparable =
     when sortDirections is
