@@ -1,8 +1,8 @@
 module DocBook exposing (Model, Msg(..), init, main, update, view)
 
 import Browser
+import Example.Paginated as Paginated
 import Example.Presidents as Presidents
-import Example.PresidentsPaginated as Paginated
 import Html exposing (Html)
 import Html.Attributes exposing (class, id, style)
 import Html.Events exposing (onClick)
@@ -42,19 +42,19 @@ view model =
     let
         isActive variant =
             if model.activeExample == variant then
-                class "active"
+                [ class "active", Html.Attributes.tabindex -1 ]
 
             else
-                class ""
+                []
 
         variants =
             Array.map
-                (\variant -> Html.button [ onClick (SwitchExample variant), isActive variant ] [ Html.text <| exampleName variant ])
+                (\variant -> Html.button ([ onClick <| SwitchExample variant ] ++ isActive variant) [ Html.text <| exampleName variant ])
                 buttons
     in
     Html.div [ id "wrapper" ]
-        [ Html.div [ id "navigation" ] ([ Html.h2 [] [ Html.text "Examples" ] ] ++ variants)
-        , Html.div [ id "example" ]
+        [ Html.nav [ id "navigation" ] ([ Html.h3 [] [ Html.text "Examples" ] ] ++ variants)
+        , Html.article [ id "example" ]
             [ when model.activeExample is
                 ShowPresidents ->
                     Presidents.view model.presidents |> Html.map PresidentsMsg
@@ -83,11 +83,8 @@ type ExampleShown
     | ShowPaginated
 
 
-
--- don't forget to add the example to this list, otherwise it won't show up...
-
-
 buttons =
+    -- don't forget to add the example to this list, otherwise it won't show up...
     [ ShowPresidents, ShowPaginated ]
 
 

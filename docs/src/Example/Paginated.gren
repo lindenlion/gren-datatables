@@ -1,4 +1,4 @@
-module Example.PresidentsPaginated exposing (Model, Msg(..), Person, config, init, main, presidents, update, view)
+module Example.Paginated exposing (Model, Msg(..), Person, config, init, main, presidents, update, view)
 
 import Browser
 import DataTable as Table exposing (SortDirection(..))
@@ -76,13 +76,7 @@ view { people, tableState, query } =
             Array.keepIf (String.contains lowerQuery << String.toLower << .name) people
     in
     div []
-        [ h1 [] [ text "Birthplaces of U.S. Presidents" ]
-        , ul []
-            [ li [] [ text "Single click on column header to add/move that column to the end of the sort order (...then sort by Year)" ]
-            , li [] [ text "Double click to reset the sort order to just that column (Sort by Name)." ]
-            , li [] [ text "I don't like this user interaction, but it is, what it is for now. Suggestions for change welcome." ]
-            , li [] [ text "I'd prefer to make short click reset and long click add to sort order." ]
-            ]
+        [ h1 [] [ text "Pagination (Scrolling variant)" ]
         , div [] []
         , input [ placeholder "Search by Name", onInput SetQuery ] []
         , Table.pageLengthChooser config tableState

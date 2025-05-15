@@ -374,6 +374,17 @@ defaultTableHeader headerInfos =
         defaultTH : HeaderInfo msg -> Html msg
         defaultTH { name, selected, sortDirections, clickActions } =
             let
+                sortSequenceNumber =
+                    when selected is
+                        Just { sortRank } ->
+                            if sortRank == 0 then
+                                []
+                            else
+                                [ Html.sup [ A.style "opacity" "0.4" ] [ Html.text <| String.fromInt sortRank ] ]
+
+                        _ ->
+                            []
+
                 columnTitle =
                     Html.span [ A.class "dt-column-title" ] [ Html.text name ]
 
@@ -385,7 +396,7 @@ defaultTableHeader headerInfos =
                             , A.attribute "role" "button"
                             , A.tabindex 0
                             ]
-                            []
+                            sortSequenceNumber
 
                     else
                         Html.text ""
@@ -700,10 +711,8 @@ view ((Config { toId, toMsg, columns, customizations }) as conf) state data =
 type alias HeaderInfo msg =
     { name : String
     , selected : Maybe { sortRank : Int, sortDirection : SortDirection }
-    , -- Nothing if not selected, otherwise Just {sortRank, sortDirection}
-      sortDirections : Array SortDirection
-    , -- Empty if Unsortable
-      clickActions : Array (Attribute msg)
+    , sortDirections : Array SortDirection
+    , clickActions : Array (Attribute msg)
     }
 
 
@@ -741,8 +750,8 @@ toHeaderInfo ((State { sortColumns }) as state) toMsg { name, sorter } =
                             Array.keepIf (\{ right = { sortColumnName } } -> name == sortColumnName) indexedList
                     in
                     when Array.takeFirst 1 filteredList is
-                        [ { left = index, right = { sortDirection } } ] ->
-                            Just { sortDirection = sortDirection, sortRank = index }
+                        [ { left = index , right = { sortDirection } } ] ->
+                            Just { sortDirection = sortDirection, sortRank = if Array.length indexedList == 1 then 0 else index + 1 }
 
                         _ ->
                             Nothing
@@ -784,10 +793,13 @@ onColumnHeader : State -> String -> SortDirection -> (State -> msg) -> Array (At
 onColumnHeader state name sortDirection toMsg =
     [ E.onClick <|
         toMsg <|
-            updateMultiSortState name sortDirection state
-    , E.onDoubleClick <|
-        toMsg <|
             updateSortState name sortDirection state
+    , E.preventDefaultOn "long-press" <|
+        Json.Decode.map (\msg -> { message = msg, preventDefault = True }) <|
+            Json.Decode.succeed <|
+                toMsg <|
+                    updateMultiSortState name sortDirection state
+    , A.attribute "data-long-press-delay" "500"
     ]
 
 

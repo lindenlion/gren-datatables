@@ -33,6 +33,7 @@ table.dataTable thead > tr > th.dt-orderable-asc span.dt-column-order:before {
     position: absolute;
     display: block;
     bottom: 11px;
+    left: -5px;
     content: "\25B2";
     content: "\25B2"/"";
 }
@@ -40,16 +41,7 @@ table.dataTable thead > tr > th.dt-orderable-desc span.dt-column-order:after {
     position: absolute;
     display: block;
     top: 11px;
+    left: -5px;
     content: "\25BC";
     content: "\25BC"/"";
-}
-
-#navigation > button {
-    background: #ededed;
-    border: 1px solid #ccc;
-    padding: 5px 3px;
-    border-radius: 3px;
-    margin: 3px 0;
-    cursor: pointer;
-    width: 100%;
 }

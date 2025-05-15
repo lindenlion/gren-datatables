@@ -72,14 +72,18 @@ view { people, tableState, query } =
             Array.keepIf (String.contains lowerQuery << String.toLower << .name) people
     in
     div []
-        [ h1 [] [ text "Birthplaces of U.S. Presidents" ]
+        [ h1 [] [ text "Sortable table." ]
         , ul []
-            [ li [] [ text "Single click on column header to add/move that column to the end of the sort order (...then sort by Year)" ]
-            , li [] [ text "Double click to reset the sort order to just that column (Sort by Name)." ]
-            , li [] [ text "I don't like this user interaction, but it is, what it is for now. Suggestions for change welcome." ]
-            , li [] [ text "I'd prefer to make short click reset and long click add to sort order." ]
+            [ li [] [ text "Single click to (re)set the sort order to that column." ]
+            , ul []
+                [ li [] [ text "If the column was selected already, the sort order is reversed." ]
+                ]
+            , li [] [ text "Long click on column header to add that column to the end of the sort order (...then sort by Year)." ]
+            , ul []
+                [ li [] [ text "If the column was selected already, it is moved to the end of the sort order sequence" ]
+                ]
             ]
-        , div [] []
+        , h1 [] [ text "Birthplaces of U.S. Presidents" ]
         , input [ placeholder "Search by Name", onInput SetQuery ] []
         , Table.view config tableState acceptablePeople
         ]
@@ -162,3 +166,7 @@ presidents =
     , person "Barack Obama" 1961 "Honolulu" "Hawaii"
     , person "Donald Trump" 1946 "New York City" "New York"
     ]
+
+
+
+-- https://data.stadt-zuerich.ch/api/3/action/datastore_search_sql?sql=WITH%20male%20AS%20(SELECT%20SUM(%22AnzGebuWir%22::int)%20AS%20mcount,%20%22Vorname%22%20from%20%227abf8562-4568-4c8c-8f1f-a842a5a54616%22%20WHERE%20%22SexLang%22%20=%20%27m%C3%A4nnlich%27%20GROUP%20BY%20%22Vorname%22),%20female%20AS%20(SELECT%20SUM(%22AnzGebuWir%22::int)%20AS%20fcount,%20%22Vorname%22%20from%20%227abf8562-4568-4c8c-8f1f-a842a5a54616%22%20WHERE%20%22SexLang%22%20=%20%27weiblich%27%20GROUP%20BY%20%22Vorname%22)%20SELECT%20mcount,%20fcount,%20(mcount::decimal/fcount::decimal)%20AS%20quotient,%20male.%22Vorname%22%20FROM%20male%20INNER%20JOIN%20female%20ON%20male.%22Vorname%22%20=%20female.%22Vorname%22%20WHERE%20mcount%20%3E%201%20AND%20fcount%20%3E%201%20ORDER%20BY%20quotient%20DESC%20LIMIT%201000
