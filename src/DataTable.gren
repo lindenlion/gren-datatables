@@ -803,12 +803,13 @@ onColumnHeader state name sortDirection toMsg =
     [ E.onClick <|
         toMsg <|
             updateSortState name sortDirection state
-    , E.preventDefaultOn "long-press" <|
-        Json.Decode.map (\msg -> { message = msg, preventDefault = True }) <|
-            Json.Decode.succeed <|
-                toMsg <|
-                    updateMultiSortState name sortDirection state
-    , A.attribute "data-long-press-delay" "500"
+    , E.onMouseUp <|
+        toMsg <|
+            updateMultiSortState name sortDirection state
+    , A.title <|
+        "Click to sort by this column.\n"
+            ++ "Click elsewhere and release here\n"
+            ++ "to add this column to the sort order."
     ]
 
 

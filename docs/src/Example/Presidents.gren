@@ -73,15 +73,11 @@ view { people, tableState, query } =
     in
     div []
         [ h1 [] [ text "Sortable table." ]
-        , ul []
-            [ li [] [ text "Single click to (re)set the sort order to that column." ]
-            , ul []
-                [ li [] [ text "If the column was selected already, the sort order is reversed." ]
-                ]
-            , li [] [ text "Long click on column header to add that column to the end of the sort order (...then sort by Year)." ]
-            , ul []
-                [ li [] [ text "If the column was selected already, it is moved to the end of the sort order sequence" ]
-                ]
+        , div []
+            [ text "Single click to set the sort order to that column. "
+            , text "If the column was selected already, the sort order is reversed. "
+            , text "Click elsewhere and release the click on column header to add that column to the end of the sort order (...then sort by Year). "
+            , text "If the column was selected already, it is moved to the end of the sort order sequence. "
             ]
         , h1 [] [ text "Birthplaces of U.S. Presidents" ]
         , input [ placeholder "Search by Name", onInput SetQuery ] []
