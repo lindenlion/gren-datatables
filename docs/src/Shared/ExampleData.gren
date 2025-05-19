@@ -1,0 +1,78 @@
+module Shared.ExampleData exposing (Person, presidents)
+
+import Html
+
+
+
+-- Demo data used in all examples
+
+
+main =
+    Html.text "This module exposes data to other modules."
+
+
+type alias Person =
+    { name : String
+    , year : Int
+    , city : String
+    , state : String
+    }
+
+
+personWithNameYearCityState : String -> Int -> String -> String -> Person
+personWithNameYearCityState name year city state =
+    { name = name, year = year, city = city, state = state }
+
+
+presidents : Array Person
+presidents =
+    [ personWithNameYearCityState "George Washington" 1732 "Westmoreland County" "Virginia"
+    , personWithNameYearCityState "John Adams" 1735 "Braintree" "Massachusetts"
+    , personWithNameYearCityState "Thomas Jefferson" 1743 "Shadwell" "Virginia"
+    , personWithNameYearCityState "James Madison" 1751 "Port Conway" "Virginia"
+    , personWithNameYearCityState "James Monroe" 1758 "Monroe Hall" "Virginia"
+    , personWithNameYearCityState "Andrew Jackson" 1767 "Waxhaws Region" "South/North Carolina"
+    , personWithNameYearCityState "John Quincy Adams" 1767 "Braintree" "Massachusetts"
+    , personWithNameYearCityState "William Henry Harrison" 1773 "Charles City County" "Virginia"
+    , personWithNameYearCityState "Martin Van Buren" 1782 "Kinderhook" "New York"
+    , personWithNameYearCityState "Zachary Taylor" 1784 "Barboursville" "Virginia"
+    , personWithNameYearCityState "John Tyler" 1790 "Charles City County" "Virginia"
+    , personWithNameYearCityState "James Buchanan" 1791 "Cove Gap" "Pennsylvania"
+    , personWithNameYearCityState "James K. Polk" 1795 "Pineville" "North Carolina"
+    , personWithNameYearCityState "Millard Fillmore" 1800 "Summerhill" "New York"
+    , personWithNameYearCityState "Franklin Pierce" 1804 "Hillsborough" "New Hampshire"
+    , personWithNameYearCityState "Andrew Johnson" 1808 "Raleigh" "North Carolina"
+    , personWithNameYearCityState "Abraham Lincoln" 1809 "Sinking spring" "Kentucky"
+    , personWithNameYearCityState "Ulysses S. Grant" 1822 "Point Pleasant" "Ohio"
+    , personWithNameYearCityState "Rutherford B. Hayes" 1822 "Delaware" "Ohio"
+    , personWithNameYearCityState "Chester A. Arthur" 1829 "Fairfield" "Vermont"
+    , personWithNameYearCityState "James A. Garfield" 1831 "Moreland Hills" "Ohio"
+    , personWithNameYearCityState "Benjamin Harrison" 1833 "North Bend" "Ohio"
+    , personWithNameYearCityState "Grover Cleveland" 1837 "Caldwell" "New Jersey"
+    , personWithNameYearCityState "William McKinley" 1843 "Niles" "Ohio"
+    , personWithNameYearCityState "Woodrow Wilson" 1856 "Staunton" "Virginia"
+    , personWithNameYearCityState "William Howard Taft" 1857 "Cincinnati" "Ohio"
+    , personWithNameYearCityState "Theodore Roosevelt" 1858 "New York City" "New York"
+    , personWithNameYearCityState "Warren G. Harding" 1865 "Blooming Grove" "Ohio"
+    , personWithNameYearCityState "Calvin Coolidge" 1872 "Plymouth" "Vermont"
+    , personWithNameYearCityState "Herbert Hoover" 1874 "West Branch" "Iowa"
+    , personWithNameYearCityState "Franklin D. Roosevelt" 1882 "Hyde Park" "New York"
+    , personWithNameYearCityState "Harry S. Truman" 1884 "Lamar" "Missouri"
+    , personWithNameYearCityState "Dwight D. Eisenhower" 1890 "Denison" "Texas"
+    , personWithNameYearCityState "Lyndon B. Johnson" 1908 "Stonewall" "Texas"
+    , personWithNameYearCityState "Ronald Reagan" 1911 "Tampico" "Illinois"
+    , personWithNameYearCityState "Richard M. Nixon" 1913 "Yorba Linda" "California"
+    , personWithNameYearCityState "Gerald R. Ford" 1913 "Omaha" "Nebraska"
+    , personWithNameYearCityState "John F. Kennedy" 1917 "Brookline" "Massachusetts"
+    , personWithNameYearCityState "George H. W. Bush" 1924 "Milton" "Massachusetts"
+    , personWithNameYearCityState "Jimmy Carter" 1924 "Plains" "Georgia"
+    , personWithNameYearCityState "George W. Bush" 1946 "New Haven" "Connecticut"
+    , personWithNameYearCityState "Bill Clinton" 1946 "Hope" "Arkansas"
+    , personWithNameYearCityState "Barack Obama" 1961 "Honolulu" "Hawaii"
+    , personWithNameYearCityState "Donald Trump" 1946 "New York City" "New York"
+    , personWithNameYearCityState "Joe Biden" 1942 "Scranton" "Pennsylvania"
+    ]
+
+
+
+-- https://data.stadt-zuerich.ch/api/3/action/datastore_search_sql?sql=WITH%20male%20AS%20(SELECT%20SUM(%22AnzGebuWir%22::int)%20AS%20mcount,%20%22Vorname%22%20from%20%227abf8562-4568-4c8c-8f1f-a842a5a54616%22%20WHERE%20%22SexLang%22%20=%20%27m%C3%A4nnlich%27%20GROUP%20BY%20%22Vorname%22),%20female%20AS%20(SELECT%20SUM(%22AnzGebuWir%22::int)%20AS%20fcount,%20%22Vorname%22%20from%20%227abf8562-4568-4c8c-8f1f-a842a5a54616%22%20WHERE%20%22SexLang%22%20=%20%27weiblich%27%20GROUP%20BY%20%22Vorname%22)%20SELECT%20mcount,%20fcount,%20(mcount::decimal/fcount::decimal)%20AS%20quotient,%20male.%22Vorname%22%20FROM%20male%20INNER%20JOIN%20female%20ON%20male.%22Vorname%22%20=%20female.%22Vorname%22%20WHERE%20mcount%20%3E%201%20AND%20fcount%20%3E%201%20ORDER%20BY%20quotient%20DESC%20LIMIT%201000

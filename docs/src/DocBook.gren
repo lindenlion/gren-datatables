@@ -6,6 +6,7 @@ import Example.Presidents as Presidents
 import Html exposing (Html)
 import Html.Attributes exposing (class, id, style)
 import Html.Events exposing (onClick)
+import Shared.ExampleData as Data
 
 
 main : Program {} Model Msg
@@ -25,8 +26,8 @@ type Msg
 
 init =
     { activeExample = ShowPresidents
-    , presidents = Presidents.init Presidents.presidents
-    , paginated = Paginated.init Paginated.presidents
+    , presidents = Presidents.init Data.presidents
+    , paginated = Paginated.init Data.presidents
     }
 
 
