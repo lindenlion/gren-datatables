@@ -1,0 +1,102 @@
+module Example.Countries exposing (Model, Msg(..), config, init, main, update, view)
+
+import Browser
+import DataTable as Table exposing (SortDirection(..))
+import Html exposing (Html, div, h1, input, li, text, ul)
+import Html.Attributes exposing (placeholder)
+import Html.Events exposing (onInput)
+import Shared.ExampleData as Data
+
+
+main : Program {} Model Msg
+main =
+    Browser.sandbox
+        { init = init Data.countries
+        , update = update
+        , view = view
+        }
+
+
+
+-- MODEL
+
+
+type alias Model =
+    { countries : Array Data.Country
+    , tableState : Table.State
+    , query : String
+    }
+
+
+init : Array Data.Country -> Model
+init people =
+    let
+        model =
+            { countries = Data.countries
+            , tableState =
+                Table.new "Countries"
+                    |> Table.setPaginationWith 10 [ 0, 5, 25, 50 ]
+                    |> Table.updateSortState "alpha_2" Asc
+                    |> Table.updateActiveRowId ""
+            , query = ""
+            }
+    in
+    model
+
+
+
+-- UPDATE
+
+
+type Msg
+    = SetQuery String
+    | SetTableState Table.State
+
+
+update : Msg -> Model -> Model
+update msg model =
+    when msg is
+        SetQuery newQuery ->
+            { model | query = newQuery }
+
+        SetTableState newState ->
+            { model | tableState = newState }
+
+
+
+-- VIEW
+
+
+view : Model -> Html Msg
+view { countries, tableState, query } =
+    let
+        lowerQuery =
+            String.toLower query
+
+        filteredByEnglishName =
+            Array.keepIf (String.contains lowerQuery << String.toLower << .en) countries
+    in
+    div []
+        [ h1 [] [ text "Pagination" ]
+        , div [] []
+        , input [ placeholder "Search by English country name", onInput SetQuery ] []
+        , Table.pageLengthChooser config tableState
+        , Table.view config tableState filteredByEnglishName
+        ]
+
+
+config : Table.Config Data.Country Msg
+config =
+    Table.config
+        { toId = .alpha_2
+        , toMsg = SetTableState
+        , columns =
+            [ Table.stringColumn "alpha_2" .alpha_2
+            , Table.stringColumn "alpha_3" .alpha_3
+            , Table.stringColumn "English" .en
+            , Table.stringColumn "German" .de
+            , Table.stringColumn "Arabic" .ar
+            , Table.stringColumn "Chinese" .zh
+            , Table.stringColumn "Traditional Chinese" .zh_tw
+            ]
+        }

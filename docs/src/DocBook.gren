@@ -1,6 +1,7 @@
 module DocBook exposing (Model, Msg(..), init, main, update, view)
 
 import Browser
+import Example.Countries as Countries
 import Example.Paginated as Paginated
 import Example.Presidents as Presidents
 import Html exposing (Html)
@@ -22,12 +23,14 @@ type Msg
     = SwitchExample ExampleShown
     | PresidentsMsg Presidents.Msg
     | PaginatedMsg Paginated.Msg
+    | CountriesMsg Countries.Msg
 
 
 init =
     { activeExample = ShowPresidents
     , presidents = Presidents.init Data.presidents
     , paginated = Paginated.init Data.presidents
+    , countries = Countries.init Data.countries
     }
 
 
@@ -35,6 +38,7 @@ type alias Model =
     { activeExample : ExampleShown
     , presidents : Presidents.Model
     , paginated : Paginated.Model
+    , countries : Countries.Model
     }
 
 
@@ -57,6 +61,9 @@ view model =
         [ Html.nav [ id "navigation" ] ([ Html.h3 [] [ Html.text "Examples" ] ] ++ variants)
         , Html.article [ id "example" ]
             [ when model.activeExample is
+                ShowCountries ->
+                    Countries.view model.countries |> Html.map CountriesMsg
+
                 ShowPresidents ->
                     Presidents.view model.presidents |> Html.map PresidentsMsg
 
@@ -72,6 +79,9 @@ update msg model =
         SwitchExample exampleToSwitchTo ->
             { model | activeExample = exampleToSwitchTo }
 
+        CountriesMsg exampleMsg ->
+            { model | countries = Countries.update exampleMsg <| .countries model }
+
         PresidentsMsg exampleMsg ->
             { model | presidents = Presidents.update exampleMsg <| .presidents model }
 
@@ -82,11 +92,12 @@ update msg model =
 type ExampleShown
     = ShowPresidents
     | ShowPaginated
+    | ShowCountries
 
 
 buttons =
     -- don't forget to add the example to this list, otherwise it won't show up...
-    [ ShowPresidents, ShowPaginated ]
+    [ ShowPresidents, ShowCountries, ShowPaginated ]
 
 
 exampleName : ExampleShown -> String
@@ -95,5 +106,8 @@ exampleName variant =
         ShowPresidents ->
             "Sorting"
 
-        ShowPaginated ->
+        ShowCountries ->
             "Pagination"
+
+        ShowPaginated ->
+            "Scrolling Pagination"
